@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a1628">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SailTrack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+:root {
+  --navy: #0a1628;
+  --deep: #0d1f3c;
+  --panel: #111e35;
+  --border: #1e3358;
+  --accent: #00c9ff;
+  --accent2: #0077b6;
+  --gold: #f0c040;
+  --danger: #e63946;
+  --success: #06d6a0;
+  --text: #cde0f5;
+  --muted: #5a7aaa;
+  --font-ui: 'Rajdhani', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--navy);
+  color: var(--text);
+  font-family: var(--font-ui);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* HEADER */
+header {
+  background: var(--deep);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 1000;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.logo-text {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.logo-sub {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.header-stats {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.stat-badge {
+  text-align: center;
+}
+
+.stat-badge .val {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.stat-badge .lbl {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* TABS */
+.tabs {
+  display: flex;
+  background: var(--deep);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* MAP VIEW */
+#map-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#map {
+  flex: 1;
+  position: relative;
+}
+
+/* Wind overlay on map */
+.wind-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 800;
+  background: rgba(10, 22, 40, 0.88);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 130px;
+  backdrop-filter: blur(6px);
+}
+
+.wind-title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.wind-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wind-arrow-container {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wind-arrow {
+  font-size: 24px;
+  display: block;
+  transition: transform 0.8s ease;
+  color: var(--gold);
+}
+
+.wind-vals {
+  display: flex;
+  flex-direction: column;
+}
+
+.wind-speed-val {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.wind-speed-unit {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.wind-dir-text {
+  font-size: 11px;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+/* Heading overlay */
+.heading-overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 800;
+  background: rgba(10, 22, 40, 0.88);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  backdrop-filter: blur(6px);
+}
+
+.heading-title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.heading-val {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+/* CONTROL BAR */
+.control-bar {
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.btn-track {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-track.start {
+  background: linear-gradient(135deg, #06d6a0, #0077b6);
+  color: white;
+}
+
+.btn-track.stop {
+  background: linear-gradient(135deg, #e63946, #c1121f);
+  color: white;
+}
+
+.btn-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.btn-track:active::after { opacity: 0.15; }
+
+.btn-center {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--deep);
+  color: var(--accent);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.btn-center:active { background: var(--border); }
+
+/* Recording pulse */
+.rec-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--danger);
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+  animation: pulse 1.2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* SPEED LEGEND */
+.speed-legend {
+  position: absolute;
+  bottom: 76px;
+  left: 10px;
+  z-index: 800;
+  background: rgba(10, 22, 40, 0.88);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  backdrop-filter: blur(6px);
+}
+
+.legend-title {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.legend-bar {
+  width: 100px;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #00ff88, #ffdd00, #ff4400);
+  margin-bottom: 3px;
+}
+
+.legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+}
+
+/* TRIPS VIEW */
+#trips-view {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.trips-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.trips-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--deep);
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.trip-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.trip-card:active { border-color: var(--accent); }
+
+.trip-card-header {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trip-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.trip-duration {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.trip-stats {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--border);
+}
+
+.trip-stat {
+  flex: 1;
+  padding: 8px;
+  text-align: center;
+  border-right: 1px solid var(--border);
+}
+
+.trip-stat:last-child { border-right: none; }
+
+.trip-stat .v {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.trip-stat .l {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.trip-map-preview {
+  height: 140px;
+  background: var(--deep);
+  position: relative;
+}
+
+.trip-wind-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.trip-wind-badge span { color: var(--gold); font-weight: 600; }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; letter-spacing: 1px; }
+
+/* Delete button on trip card */
+.trip-delete {
+  padding: 4px 8px;
+  border: 1px solid #3a1a1a;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--danger);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  letter-spacing: 1px;
+}
+
+/* GPS status */
+.gps-status {
+  position: absolute;
+  bottom: 76px;
+  right: 10px;
+  z-index: 800;
+  background: rgba(10,22,40,0.9);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gps-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.gps-dot.active { background: var(--success); animation: pulse 1.2s infinite; }
+.gps-dot.tracking { background: var(--danger); animation: pulse 0.8s infinite; }
+
+/* Accuracy ring on map marker */
+.accuracy-circle { pointer-events: none; }
+
+/* Notification toast */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  z-index: 9999;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Leaflet overrides */
+.leaflet-container { background: #0d1a2e; }
+.leaflet-control-zoom { display: none; }
+.leaflet-tile { filter: brightness(0.8) saturate(0.7) hue-rotate(10deg); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+      <path d="M16 4 L28 26 L4 26 Z" fill="none" stroke="#00c9ff" stroke-width="1.5" opacity="0.4"/>
+      <path d="M16 4 L16 26" stroke="#00c9ff" stroke-width="1.5"/>
+      <path d="M16 6 L26 22 L16 22 Z" fill="#00c9ff" opacity="0.7"/>
+      <path d="M6 28 L26 28" stroke="#0077b6" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <div class="logo-text">SailTrack</div>
+      <div class="logo-sub">GPS Navigator</div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-badge">
+      <div class="val" id="hdr-speed">0.0</div>
+      <div class="lbl">kn speed</div>
+    </div>
+    <div class="stat-badge">
+      <div class="val" id="hdr-dist">0.00</div>
+      <div class="lbl">nm dist</div>
+    </div>
+    <div class="stat-badge">
+      <div class="val" id="hdr-time">00:00</div>
+      <div class="lbl">elapsed</div>
+    </div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" id="tab-map" onclick="switchTab('map')">⚓ LIVE MAP</div>
+  <div class="tab" id="tab-trips" onclick="switchTab('trips')">📋 TRIPS</div>
+</div>
+
+<div id="map-view">
+  <div id="map">
+    <!-- Wind overlay -->
+    <div class="wind-overlay" id="wind-overlay">
+      <div class="wind-title">Wind</div>
+      <div class="wind-row">
+        <div class="wind-arrow-container">
+          <span class="wind-arrow" id="wind-arrow">↑</span>
+        </div>
+        <div class="wind-vals">
+          <div class="wind-speed-val" id="wind-speed">—</div>
+          <div class="wind-speed-unit">knots</div>
+          <div class="wind-dir-text" id="wind-dir">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Heading overlay -->
+    <div class="heading-overlay">
+      <div class="heading-title">Heading</div>
+      <div class="heading-val" id="heading-val">—°</div>
+    </div>
+
+    <!-- Speed legend -->
+    <div class="speed-legend">
+      <div class="legend-title">Speed (kn)</div>
+      <div class="legend-bar"></div>
+      <div class="legend-labels"><span>0</span><span>5</span><span>10+</span></div>
+    </div>
+
+    <!-- GPS status -->
+    <div class="gps-status">
+      <div class="gps-dot" id="gps-dot"></div>
+      <span id="gps-text">NO GPS</span>
+    </div>
+  </div>
+
+  <div class="control-bar">
+    <button class="btn-center" id="btn-center" onclick="centerMap()" title="Center map">⊕</button>
+    <button class="btn-track start" id="btn-track" onclick="toggleTracking()">
+      <span id="track-label">▶ START SAILING</span>
+    </button>
+  </div>
+</div>
+
+<div id="trips-view">
+  <div class="trips-header">
+    <div class="trips-title">Trip Log</div>
+  </div>
+  <div id="trips-list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  STATE
+// ============================================================
+let map, currentMarker, accuracyCircle;
+let isTracking = false;
+let watchId = null;
+let currentTrip = null;      // { points: [{lat,lng,spd,ts}], startTime, windData }
+let polylines = [];           // active trip colored segments
+let windCache = null;
+let windFetchTimer = null;
+let elapsedTimer = null;
+let trackStartTime = null;
+let totalDistance = 0;        // nm
+let lastPoint = null;
+let heading = null;
+
+// ============================================================
+//  INIT MAP
+// ============================================================
+function initMap() {
+  map = L.map('map', {
+    center: [52.5, 4.5],
+    zoom: 13,
+    zoomControl: false,
+    attributionControl: false
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '© CartoDB'
+  }).addTo(map);
+
+  L.control.attribution({ position: 'bottomright', prefix: false }).addTo(map);
+}
+
+// ============================================================
+//  SPEED → COLOR
+// ============================================================
+function speedToColor(knots) {
+  // 0 kn = green, 5 kn = yellow, 10+ kn = red
+  const t = Math.min(knots / 10, 1);
+  let r, g, b;
+  if (t < 0.5) {
+    const s = t * 2;
+    r = Math.round(0 + s * 255);
+    g = Math.round(255);
+    b = Math.round(136 * (1 - s));
+  } else {
+    const s = (t - 0.5) * 2;
+    r = 255;
+    g = Math.round(255 * (1 - s) + 68 * s);
+    b = 0;
+  }
+  return `rgb(${r},${g},${b})`;
+}
+
+// ============================================================
+//  DRAW SEGMENT
+// ============================================================
+function drawSegment(p1, p2, speedKnots) {
+  if (!p1 || !p2) return;
+  const color = speedToColor(speedKnots);
+  const pl = L.polyline([[p1.lat, p1.lng], [p2.lat, p2.lng]], {
+    color,
+    weight: 4,
+    opacity: 0.92,
+    lineCap: 'round'
+  }).addTo(map);
+  polylines.push(pl);
+}
+
+// ============================================================
+//  HAVERSINE DISTANCE (nm)
+// ============================================================
+function distanceNm(p1, p2) {
+  const R = 3440.065; // nautical miles
+  const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+  const dLon = (p2.lng - p1.lng) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(p1.lat*Math.PI/180)*Math.cos(p2.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ============================================================
+//  BEARING
+// ============================================================
+function bearing(p1, p2) {
+  const lat1 = p1.lat * Math.PI/180, lat2 = p2.lat * Math.PI/180;
+  const dLon = (p2.lng - p1.lng) * Math.PI/180;
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+  return (Math.atan2(y, x) * 180/180 + 360) % 360;
+}
+
+// ============================================================
+//  WIND FROM OPEN-METEO (free, no key)
+// ============================================================
+async function fetchWind(lat, lng) {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kn&timezone=auto&forecast_days=1`;
+    const res = await fetch(url);
+    const d = await res.json();
+    if (d.current) {
+      const ws = d.current.wind_speed_10m;
+      const wd = d.current.wind_direction_10m;
+      windCache = { speed: ws, dir: wd, ts: Date.now() };
+      updateWindUI(ws, wd);
+      return windCache;
+    }
+  } catch(e) { console.warn('Wind fetch failed', e); }
+  return null;
+}
+
+function degToCompass(deg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+function updateWindUI(speed, dir) {
+  document.getElementById('wind-speed').textContent = speed.toFixed(1);
+  document.getElementById('wind-dir').textContent = degToCompass(dir) + ' ' + Math.round(dir) + '°';
+  document.getElementById('wind-arrow').style.transform = `rotate(${dir}deg)`;
+}
+
+// ============================================================
+//  GPS TRACKING
+// ============================================================
+function startGPS() {
+  if (!navigator.geolocation) {
+    toast('GPS not available on this device');
+    return;
+  }
+  watchId = navigator.geolocation.watchPosition(onPosition, onGPSError, {
+    enableHighAccuracy: true,
+    maximumAge: 2000,
+    timeout: 10000
+  });
+  document.getElementById('gps-dot').className = 'gps-dot active';
+  document.getElementById('gps-text').textContent = 'SEARCHING';
+}
+
+function stopGPS() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  document.getElementById('gps-dot').className = 'gps-dot';
+  document.getElementById('gps-text').textContent = 'NO GPS';
+}
+
+function onPosition(pos) {
+  const { latitude: lat, longitude: lng, speed, accuracy, heading: hdg } = pos.coords;
+  const speedKnots = speed ? speed * 1.94384 : 0;
+
+  // Update GPS status
+  document.getElementById('gps-dot').className = isTracking ? 'gps-dot tracking' : 'gps-dot active';
+  document.getElementById('gps-text').textContent = `±${Math.round(accuracy)}m`;
+
+  // Update heading
+  if (hdg !== null && hdg !== undefined) {
+    heading = hdg;
+    document.getElementById('heading-val').textContent = Math.round(hdg) + '°';
+  }
+
+  // Update speed display
+  document.getElementById('hdr-speed').textContent = speedKnots.toFixed(1);
+
+  // Move / create current position marker
+  updatePositionMarker(lat, lng, accuracy);
+
+  if (isTracking) {
+    const pt = { lat, lng, spd: speedKnots, ts: Date.now() };
+
+    if (lastPoint) {
+      const d = distanceNm(lastPoint, pt);
+      if (d > 0.005) { // only add point if moved >~10m
+        totalDistance += d;
+        drawSegment(lastPoint, pt, speedKnots);
+        document.getElementById('hdr-dist').textContent = totalDistance.toFixed(2);
+        currentTrip.points.push(pt);
+        lastPoint = pt;
+      }
+    } else {
+      currentTrip.points.push(pt);
+      lastPoint = pt;
+    }
+
+    // Fetch wind every 5 minutes or at start
+    if (!windCache || (Date.now() - windCache.ts) > 300000) {
+      fetchWind(lat, lng).then(w => {
+        if (w && currentTrip) currentTrip.windSamples.push({ ...w, lat, lng });
+      });
+    }
+  }
+}
+
+function onGPSError(err) {
+  console.warn('GPS error', err);
+  document.getElementById('gps-text').textContent = 'GPS ERR';
+  toast('GPS error: ' + err.message);
+}
+
+// ============================================================
+//  POSITION MARKER
+// ============================================================
+function updatePositionMarker(lat, lng, accuracy) {
+  const latlng = [lat, lng];
+
+  if (!currentMarker) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:16px;height:16px;
+        background:#00c9ff;
+        border:3px solid white;
+        border-radius:50%;
+        box-shadow:0 0 12px #00c9ff;
+      "></div>`,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
+    });
+    currentMarker = L.marker(latlng, { icon, zIndexOffset: 1000 }).addTo(map);
+    map.setView(latlng, 15);
+  } else {
+    currentMarker.setLatLng(latlng);
+  }
+
+  if (accuracyCircle) accuracyCircle.setLatLng(latlng).setRadius(accuracy);
+  else accuracyCircle = L.circle(latlng, {
+    radius: accuracy,
+    color: '#00c9ff',
+    fillColor: '#00c9ff',
+    fillOpacity: 0.07,
+    weight: 1,
+    opacity: 0.3,
+    className: 'accuracy-circle'
+  }).addTo(map);
+}
+
+// ============================================================
+//  TOGGLE TRACKING
+// ============================================================
+function toggleTracking() {
+  if (!isTracking) {
+    startTracking();
+  } else {
+    stopTracking();
+  }
+}
+
+function startTracking() {
+  isTracking = true;
+  trackStartTime = Date.now();
+  totalDistance = 0;
+  lastPoint = null;
+  polylines = [];
+  currentTrip = { points: [], startTime: trackStartTime, windSamples: [] };
+
+  // Clear previous route lines
+  map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+
+  document.getElementById('btn-track').className = 'btn-track stop';
+  document.getElementById('track-label').innerHTML = '<span class="rec-dot"></span>STOP SAILING';
+
+  startGPS();
+
+  elapsedTimer = setInterval(updateElapsed, 1000);
+  toast('Tracking started');
+
+  // Immediately fetch wind if we have a position
+  if (currentMarker) {
+    const p = currentMarker.getLatLng();
+    fetchWind(p.lat, p.lng);
+  }
+}
+
+function stopTracking() {
+  isTracking = false;
+  clearInterval(elapsedTimer);
+
+  document.getElementById('btn-track').className = 'btn-track start';
+  document.getElementById('track-label').textContent = '▶ START SAILING';
+
+  // Save trip
+  if (currentTrip && currentTrip.points.length > 1) {
+    saveTrip();
+    toast('Trip saved!');
+  } else {
+    toast('Trip too short — not saved');
+  }
+
+  stopGPS();
+  startGPS(); // keep GPS on for position display, just not tracking
+}
+
+// ============================================================
+//  ELAPSED TIME
+// ============================================================
+function updateElapsed() {
+  if (!trackStartTime) return;
+  const s = Math.floor((Date.now() - trackStartTime) / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const mm = String(m % 60).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  document.getElementById('hdr-time').textContent = h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+// ============================================================
+//  CENTER MAP
+// ============================================================
+function centerMap() {
+  if (currentMarker) {
+    map.setView(currentMarker.getLatLng(), 15);
+  }
+}
+
+// ============================================================
+//  SAVE / LOAD TRIPS
+// ============================================================
+function saveTrip() {
+  if (!currentTrip || currentTrip.points.length < 2) return;
+
+  const trips = loadTrips();
+  const speeds = currentTrip.points.map(p => p.spd);
+  const maxSpd = Math.max(...speeds);
+  const avgSpd = speeds.reduce((a,b) => a+b, 0) / speeds.length;
+  const dur = currentTrip.points[currentTrip.points.length-1].ts - currentTrip.startTime;
+
+  // Average wind
+  let avgWind = null;
+  if (currentTrip.windSamples.length > 0) {
+    const ws = currentTrip.windSamples;
+    avgWind = {
+      speed: ws.reduce((a,w) => a+w.speed, 0) / ws.length,
+      dir: ws[ws.length-1].dir
+    };
+  }
+
+  const trip = {
+    id: currentTrip.startTime,
+    startTime: currentTrip.startTime,
+    duration: dur,
+    distance: totalDistance,
+    maxSpeed: maxSpd,
+    avgSpeed: avgSpd,
+    points: currentTrip.points,
+    wind: avgWind
+  };
+
+  trips.unshift(trip);
+  // Keep last 50 trips
+  if (trips.length > 50) trips.pop();
+  localStorage.setItem('sailtrack_trips', JSON.stringify(trips));
+}
+
+function loadTrips() {
+  try {
+    return JSON.parse(localStorage.getItem('sailtrack_trips') || '[]');
+  } catch { return []; }
+}
+
+function deleteTrip(id, e) {
+  e.stopPropagation();
+  const trips = loadTrips().filter(t => t.id !== id);
+  localStorage.setItem('sailtrack_trips', JSON.stringify(trips));
+  renderTrips();
+  toast('Trip deleted');
+}
+
+// ============================================================
+//  RENDER TRIPS LIST
+// ============================================================
+function renderTrips() {
+  const trips = loadTrips();
+  const container = document.getElementById('trips-list');
+
+  if (trips.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">⚓</div>
+      <div class="empty-text">No trips yet.<br>Set sail to start recording.</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = trips.map(t => {
+    const date = new Date(t.startTime);
+    const dateStr = date.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+    const timeStr = date.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+    const durMin = Math.floor(t.duration / 60000);
+    const durStr = durMin >= 60 ? `${Math.floor(durMin/60)}h ${durMin%60}m` : `${durMin}m`;
+    const windStr = t.wind ? `${t.wind.speed.toFixed(1)} kn from ${degToCompass(t.wind.dir)}` : 'No wind data';
+
+    return `<div class="trip-card" onclick="viewTrip(${t.id})">
+      <div class="trip-card-header">
+        <div>
+          <div class="trip-date">${dateStr} · ${timeStr}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="trip-duration">${durStr}</div>
+          <button class="trip-delete" onclick="deleteTrip(${t.id}, event)">✕</button>
+        </div>
+      </div>
+      <div class="trip-stats">
+        <div class="trip-stat">
+          <div class="v">${t.distance.toFixed(2)}</div>
+          <div class="l">nm</div>
+        </div>
+        <div class="trip-stat">
+          <div class="v">${t.maxSpeed.toFixed(1)}</div>
+          <div class="l">kn max</div>
+        </div>
+        <div class="trip-stat">
+          <div class="v">${t.avgSpeed.toFixed(1)}</div>
+          <div class="l">kn avg</div>
+        </div>
+      </div>
+      <div class="trip-wind-badge">🌬️ <span>${windStr}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+//  VIEW TRIP ON MAP
+// ============================================================
+function viewTrip(id) {
+  const trips = loadTrips();
+  const trip = trips.find(t => t.id === id);
+  if (!trip || trip.points.length < 2) return;
+
+  switchTab('map');
+  map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+
+  const bounds = [];
+  for (let i = 1; i < trip.points.length; i++) {
+    const p1 = trip.points[i-1], p2 = trip.points[i];
+    const spd = (p1.spd + p2.spd) / 2;
+    L.polyline([[p1.lat,p1.lng],[p2.lat,p2.lng]], {
+      color: speedToColor(spd),
+      weight: 4,
+      opacity: 0.9,
+      lineCap: 'round'
+    }).addTo(map);
+    bounds.push([p1.lat, p1.lng]);
+  }
+  bounds.push([trip.points[trip.points.length-1].lat, trip.points[trip.points.length-1].lng]);
+  map.fitBounds(bounds, { padding: [40, 40] });
+
+  if (trip.wind) updateWindUI(trip.wind.speed, trip.wind.dir);
+}
+
+// ============================================================
+//  TABS
+// ============================================================
+function switchTab(tab) {
+  if (tab === 'map') {
+    document.getElementById('map-view').style.display = 'flex';
+    document.getElementById('trips-view').style.display = 'none';
+    document.getElementById('tab-map').className = 'tab active';
+    document.getElementById('tab-trips').className = 'tab';
+    setTimeout(() => map.invalidateSize(), 10);
+  } else {
+    document.getElementById('map-view').style.display = 'none';
+    document.getElementById('trips-view').style.display = 'block';
+    document.getElementById('tab-map').className = 'tab';
+    document.getElementById('tab-trips').className = 'tab active';
+    renderTrips();
+  }
+}
+
+// ============================================================
+//  TOAST
+// ============================================================
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ============================================================
+//  BOOT
+// ============================================================
+initMap();
+startGPS();
+
+// Fetch wind every 10 minutes passively
+setInterval(() => {
+  if (currentMarker) {
+    const p = currentMarker.getLatLng();
+    fetchWind(p.lat, p.lng);
+  }
+}, 600000);
+</script>
+</body>
+</html>
