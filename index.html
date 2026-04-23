@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#060f1e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SailTrack</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+:root {
+  --navy: #060f1e;
+  --deep: #0a1628;
+  --panel: #0d1c30;
+  --card: #111e35;
+  --border: #1a2e4a;
+  --accent: #00c9ff;
+  --accent2: #0077b6;
+  --gold: #f0c040;
+  --danger: #e63946;
+  --success: #06d6a0;
+  --warn: #ff9f1c;
+  --text: #cde0f5;
+  --muted: #4a6a8a;
+  --font-ui: 'Rajdhani', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--navy);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+body { display: flex; flex-direction: column; }
+
+/* ── HEADER ── */
+header {
+  background: var(--deep);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 1000;
+}
+
+.logo { display: flex; align-items: center; gap: 8px; }
+
+.logo svg { width: 28px; height: 28px; }
+
+.logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--accent);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.logo-sub {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.hdr-stats { display: flex; gap: 14px; }
+
+.hstat { text-align: center; }
+.hstat .v {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+.hstat .l { font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+/* ── TABS ── */
+.tabs {
+  display: flex;
+  background: var(--deep);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  padding: 9px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── MAP VIEW ── */
+#map-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#map { flex: 1; position: relative; }
+
+/* Overlays */
+.map-overlay {
+  position: absolute;
+  z-index: 800;
+  background: rgba(6,15,30,0.88);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  padding: 8px 12px;
+}
+
+.wind-overlay { top: 10px; right: 10px; min-width: 120px; }
+.wind-title { font-size: 8px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
+.wind-row { display: flex; align-items: center; gap: 8px; }
+.wind-arrow { font-size: 22px; color: var(--gold); transition: transform 0.8s ease; display: block; }
+.wind-speed-v { font-family: var(--font-mono); font-size: 17px; font-weight: 700; color: var(--accent); line-height: 1; }
+.wind-unit { font-size: 8px; color: var(--muted); letter-spacing: 1px; }
+.wind-dir-t { font-size: 10px; color: var(--text); margin-top: 1px; }
+.wind-offline { font-size: 9px; color: var(--muted); font-style: italic; margin-top: 3px; }
+
+.hdg-overlay { top: 10px; left: 10px; }
+.hdg-title { font-size: 8px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+.hdg-val { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--gold); }
+
+.legend-overlay { bottom: 78px; left: 10px; padding: 7px 10px; }
+.legend-title { font-size: 8px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+.legend-bar { width: 96px; height: 7px; border-radius: 4px; background: linear-gradient(to right,#00ff88,#ffdd00,#ff4400); margin-bottom: 3px; }
+.legend-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 8px; color: var(--muted); }
+
+.gps-overlay {
+  bottom: 78px; right: 10px;
+  padding: 6px 10px;
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; color: var(--muted); letter-spacing: 1px;
+}
+.gps-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.gps-dot.active { background: var(--success); animation: blink 1.4s infinite; }
+.gps-dot.tracking { background: var(--danger); animation: blink 0.8s infinite; }
+
+/* Screen-off indicator */
+.screenoff-overlay {
+  bottom: 78px; left: 50%; transform: translateX(-50%);
+  padding: 6px 12px;
+  font-size: 10px; color: var(--warn);
+  letter-spacing: 1px; text-transform: uppercase;
+  display: none;
+  white-space: nowrap;
+}
+.screenoff-overlay.visible { display: block; }
+
+@keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.7)} }
+
+/* ── CONTROL BAR ── */
+.control-bar {
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  width: 46px; height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--deep);
+  color: var(--accent);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+}
+.btn-icon:active { background: var(--border); }
+
+.btn-icon .badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  width: 14px; height: 14px;
+  background: var(--danger);
+  border-radius: 50%;
+  font-size: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-family: var(--font-mono);
+  display: none;
+}
+.btn-icon.screen-off-active { color: var(--warn); border-color: var(--warn); }
+
+.btn-track {
+  flex: 1; padding: 13px;
+  border: none; border-radius: 10px;
+  font-family: var(--font-ui);
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.btn-track.start { background: linear-gradient(135deg,#06d6a0,#0077b6); color: white; }
+.btn-track.stop  { background: linear-gradient(135deg,#e63946,#c1121f); color: white; }
+.btn-track:active::after { content:''; position:absolute; inset:0; background:white; opacity:0.15; }
+
+.rec-dot {
+  width: 9px; height: 9px;
+  background: white; border-radius: 50%;
+  display: inline-block; margin-right: 7px;
+  animation: blink 0.9s infinite;
+}
+
+/* ── TRIPS VIEW ── */
+#trips-view { display: none; flex: 1; overflow-y: auto; padding: 12px; }
+
+.trips-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.trips-title { font-size: 17px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+
+.trip-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.trip-card:active { border-color: var(--accent); }
+
+.trip-card-top {
+  padding: 11px 13px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.trip-date { font-size: 13px; font-weight: 600; color: var(--text); }
+.trip-time { font-size: 11px; color: var(--muted); }
+.trip-dur { font-family: var(--font-mono); font-size: 12px; color: var(--accent); }
+
+.trip-stats { display: flex; border-top: 1px solid var(--border); }
+.ts { flex:1; padding:7px; text-align:center; border-right: 1px solid var(--border); }
+.ts:last-child { border-right: none; }
+.ts .v { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--accent); }
+.ts .l { font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+.trip-wind { padding: 5px 13px 9px; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+.trip-wind span { color: var(--gold); font-weight: 600; }
+
+.trip-del { padding: 5px 9px; border: 1px solid #2a1010; border-radius: 6px; background: transparent; color: var(--danger); font-size: 11px; cursor: pointer; font-family: var(--font-ui); letter-spacing: 1px; }
+
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-icon { font-size: 44px; margin-bottom: 10px; }
+.empty-txt { font-size: 13px; letter-spacing: 1px; line-height: 1.8; }
+
+/* ── OFFLINE BANNER ── */
+.offline-banner {
+  background: #1a1000;
+  border-bottom: 1px solid #3a2500;
+  color: var(--warn);
+  text-align: center;
+  padding: 5px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: none;
+  flex-shrink: 0;
+}
+.offline-banner.show { display: block; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 86px; left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--card);
+  border: 1px solid var(--accent2);
+  color: var(--accent);
+  padding: 9px 18px;
+  border-radius: 20px;
+  font-size: 12px; letter-spacing: 1px;
+  z-index: 9999; opacity: 0;
+  transition: all 0.25s; pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Leaflet */
+.leaflet-container { background: #06101e; }
+.leaflet-control-zoom { display: none; }
+.leaflet-tile { filter: brightness(0.75) saturate(0.6) hue-rotate(8deg); }
+.leaflet-attribution-flag { display: none !important; }
+
+/* Chart mode — light basemap, no dark filter */
+body.chart-mode .leaflet-tile { filter: none; }
+body.chart-mode .leaflet-container { background: #d4e8f0; }
+.btn-icon.chart-active { color: var(--gold); border-color: var(--gold); }
+</style>
+</head>
+<body>
+
+<div class="offline-banner" id="offline-banner">⚠ Offline — kaart & wind niet beschikbaar</div>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 28 28" fill="none">
+      <path d="M14 3 L14 24" stroke="#00c9ff" stroke-width="1.5"/>
+      <path d="M14 4 L24 20 L14 20 Z" fill="#00c9ff" opacity="0.75"/>
+      <path d="M5 26 L23 26" stroke="#0077b6" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <div class="logo-text">SailTrack</div>
+      <div class="logo-sub">GPS Logger</div>
+    </div>
+  </div>
+  <div class="hdr-stats">
+    <div class="hstat"><div class="v" id="h-spd">0.0</div><div class="l">kn</div></div>
+    <div class="hstat"><div class="v" id="h-dst">0.00</div><div class="l">nm</div></div>
+    <div class="hstat"><div class="v" id="h-time">00:00</div><div class="l">tijd</div></div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" id="tab-map" onclick="switchTab('map')">⚓ KAART</div>
+  <div class="tab" id="tab-trips" onclick="switchTab('trips')">📋 TOCHTEN</div>
+</div>
+
+<div id="map-view">
+  <div id="map">
+
+    <div class="map-overlay wind-overlay">
+      <div class="wind-title">Wind</div>
+      <div class="wind-row">
+        <span class="wind-arrow" id="wind-arrow">↑</span>
+        <div>
+          <div class="wind-speed-v" id="wind-spd">—</div>
+          <div class="wind-unit">knopen</div>
+          <div class="wind-dir-t" id="wind-dir">—</div>
+        </div>
+      </div>
+      <div class="wind-offline" id="wind-offline-txt"></div>
+    </div>
+
+    <div class="map-overlay hdg-overlay">
+      <div class="hdg-title">Koers</div>
+      <div class="hdg-val" id="hdg-val">—°</div>
+    </div>
+
+    <div class="map-overlay legend-overlay">
+      <div class="legend-title">Snelheid (kn)</div>
+      <div class="legend-bar"></div>
+      <div class="legend-labels"><span>0</span><span id="legend-mid">—</span><span id="legend-max">—</span></div>
+    </div>
+
+    <div class="map-overlay gps-overlay">
+      <div class="gps-dot" id="gps-dot"></div>
+      <span id="gps-txt">GEEN GPS</span>
+    </div>
+
+    <div class="map-overlay screenoff-overlay" id="screenoff-msg">
+      📵 Scherm uit — GPS loopt door
+    </div>
+
+  </div>
+
+  <div class="control-bar">
+    <button class="btn-icon" id="btn-center" onclick="centerMap()" title="Centreer">⊕</button>
+    <button class="btn-track start" id="btn-track" onclick="toggleTracking()">
+      <span id="track-lbl">▶ START</span>
+    </button>
+    <button class="btn-icon" id="btn-screenoff" onclick="toggleScreenOff()" title="Scherm uit">📵</button>
+    <button class="btn-icon" id="btn-chart" onclick="toggleChart()" title="Zeekaart">🗺️</button>
+  </div>
+</div>
+
+<div id="trips-view">
+  <div class="trips-header">
+    <div class="trips-title">Tochtenlog</div>
+  </div>
+  <div id="trips-list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  SERVICE WORKER REGISTRATION
+// ═══════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('SW registered'))
+    .catch(e => console.warn('SW failed:', e));
+}
+
+// ═══════════════════════════════════════════════
+//  OFFLINE DETECTION
+// ═══════════════════════════════════════════════
+function updateOnlineStatus() {
+  const banner = document.getElementById('offline-banner');
+  if (!navigator.onLine) {
+    banner.classList.add('show');
+    document.getElementById('wind-offline-txt').textContent = 'Geen bereik';
+  } else {
+    banner.classList.remove('show');
+    document.getElementById('wind-offline-txt').textContent = '';
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let map, posMarker, accCircle;
+let isTracking = false;
+let watchId = null;
+let currentTrip = null;
+let activePolylines = [];
+let windCache = null;
+let elapsedTimer = null;
+let trackStart = null;
+let totalDist = 0;
+let lastPt = null;
+let screenOffMode = false;
+let wakeLock = null;
+let noSleepVideo = null;   // fallback for browsers without Wake Lock API
+
+// ═══════════════════════════════════════════════
+//  MAP INIT
+// ═══════════════════════════════════════════════
+let baseLayerDark, baseLayerLight, seaLayer;
+let chartMode = false;
+
+function initMap() {
+  map = L.map('map', {
+    center: [52.5, 5.0],
+    zoom: 13,
+    zoomControl: false,
+    attributionControl: true
+  });
+
+  // Dark base (night mode)
+  baseLayerDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    subdomains: 'abcd',
+    attribution: '© OpenStreetMap © CartoDB'
+  });
+
+  // Light base for chart mode (OSM standard — best base for nautical overlay)
+  baseLayerLight = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  });
+
+  // OpenSeaMap nautical overlay — buoys, beacons, depth contours, shipping lanes
+  seaLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    opacity: 1.0,
+    attribution: '© OpenSeaMap contributors'
+  });
+
+  baseLayerDark.addTo(map);
+}
+
+function toggleChart() {
+  chartMode = !chartMode;
+  const btn = document.getElementById('btn-chart');
+
+  if (chartMode) {
+    map.removeLayer(baseLayerDark);
+    baseLayerLight.addTo(map);
+    seaLayer.addTo(map);
+    document.body.classList.add('chart-mode');
+    btn.classList.add('chart-active');
+    btn.title = 'Nachtmodus';
+    toast('Zeekaart ingeschakeld');
+  } else {
+    map.removeLayer(seaLayer);
+    map.removeLayer(baseLayerLight);
+    baseLayerDark.addTo(map);
+    document.body.classList.remove('chart-mode');
+    btn.classList.remove('chart-active');
+    btn.title = 'Zeekaart';
+    toast('Nachtmodus ingeschakeld');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  SPEED → COLOR  (0=green, maxKn=red, relative)
+// ═══════════════════════════════════════════════
+let liveMaxSpeed = 1;   // grows during active trip; reset on new trip
+
+function speedColor(kn, maxKn) {
+  const top = Math.max(maxKn || liveMaxSpeed, 1);
+  const t = Math.min(kn / top, 1);
+  let r, g, b;
+  if (t < 0.5) {
+    const s = t * 2;
+    r = Math.round(s * 255); g = 255; b = Math.round(136 * (1 - s));
+  } else {
+    const s = (t - 0.5) * 2;
+    r = 255; g = Math.round(255 * (1 - s) + 68 * s); b = 0;
+  }
+  return `rgb(${r},${g},${b})`;
+}
+
+function updateLegend(maxKn) {
+  const mid = (maxKn / 2).toFixed(1);
+  const top = maxKn.toFixed(1);
+  document.getElementById('legend-mid').textContent = mid;
+  document.getElementById('legend-max').textContent = top;
+}
+
+function drawSeg(p1, p2, kn) {
+  // Update live max and recolor all segments when a new max is reached
+  if (kn > liveMaxSpeed) {
+    liveMaxSpeed = kn;
+    updateLegend(liveMaxSpeed);
+    recolorLiveRoute();
+  }
+  L.polyline([[p1.lat, p1.lng], [p2.lat, p2.lng]], {
+    color: speedColor(kn), weight: 4, opacity: 0.92, lineCap: 'round',
+    _spd: kn   // store speed for recoloring
+  }).addTo(map);
+}
+
+function recolorLiveRoute() {
+  map.eachLayer(l => {
+    if (l instanceof L.Polyline && l.options._spd !== undefined) {
+      l.setStyle({ color: speedColor(l.options._spd) });
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  HAVERSINE (nautical miles)
+// ═══════════════════════════════════════════════
+function distNm(a, b) {
+  const R = 3440.065;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lng - a.lng) * Math.PI / 180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+// ═══════════════════════════════════════════════
+//  DOUGLAS-PEUCKER  (reduce stored points)
+// ═══════════════════════════════════════════════
+function perpendicularDist(pt, l1, l2) {
+  const A = pt.lat - l1.lat, B = pt.lng - l1.lng;
+  const C = l2.lat - l1.lat, D = l2.lng - l1.lng;
+  const dot = A*C + B*D, lenSq = C*C + D*D;
+  const t = lenSq !== 0 ? dot / lenSq : -1;
+  const near = t < 0 ? l1 : t > 1 ? l2 : { lat: l1.lat + t*C, lng: l1.lng + t*D };
+  return Math.sqrt((pt.lat-near.lat)**2 + (pt.lng-near.lng)**2);
+}
+
+function rdp(pts, eps) {
+  if (pts.length < 3) return pts;
+  let maxD = 0, idx = 0;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = perpendicularDist(pts[i], pts[0], pts[pts.length-1]);
+    if (d > maxD) { maxD = d; idx = i; }
+  }
+  if (maxD > eps) {
+    return [...rdp(pts.slice(0, idx+1), eps).slice(0,-1), ...rdp(pts.slice(idx), eps)];
+  }
+  return [pts[0], pts[pts.length-1]];
+}
+
+// ═══════════════════════════════════════════════
+//  WIND — Open-Meteo (free, no key)
+// ═══════════════════════════════════════════════
+async function fetchWind(lat, lng) {
+  if (!navigator.onLine) {
+    document.getElementById('wind-offline-txt').textContent = 'Geen bereik';
+    return null;
+  }
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&timezone=auto&forecast_days=1`;
+    const r = await fetch(url);
+    const d = await r.json();
+    if (d.current) {
+      windCache = { speed: d.current.wind_speed_10m, dir: d.current.wind_direction_10m, ts: Date.now() };
+      updateWindUI(windCache.speed, windCache.dir);
+      document.getElementById('wind-offline-txt').textContent = '';
+      return windCache;
+    }
+  } catch(e) {
+    document.getElementById('wind-offline-txt').textContent = 'Geen bereik';
+  }
+  return null;
+}
+
+const COMPASS = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
+function deg2cmp(d) { return COMPASS[Math.round(d / 22.5) % 16]; }
+
+function updateWindUI(spd, dir) {
+  document.getElementById('wind-spd').textContent = spd.toFixed(1);
+  document.getElementById('wind-dir').textContent = `${deg2cmp(dir)} ${Math.round(dir)}°`;
+  document.getElementById('wind-arrow').style.transform = `rotate(${dir}deg)`;
+}
+
+// ═══════════════════════════════════════════════
+//  GPS
+// ═══════════════════════════════════════════════
+function startGPS() {
+  if (!navigator.geolocation) { toast('GPS niet beschikbaar'); return; }
+  watchId = navigator.geolocation.watchPosition(onPos, onGPSErr, {
+    enableHighAccuracy: true,
+    maximumAge: 3000,
+    timeout: 15000
+  });
+  setGpsDot('active', 'ZOEKEN…');
+}
+
+function stopGPS() {
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  setGpsDot('', 'GEEN GPS');
+}
+
+function setGpsDot(cls, txt) {
+  document.getElementById('gps-dot').className = 'gps-dot' + (cls ? ' ' + cls : '');
+  document.getElementById('gps-txt').textContent = txt;
+}
+
+function onPos(pos) {
+  const { latitude: lat, longitude: lng, speed, accuracy, heading: hdg } = pos.coords;
+  const kn = speed != null ? speed * 1.94384 : 0;
+
+  setGpsDot(isTracking ? 'tracking' : 'active', `±${Math.round(accuracy)}m`);
+
+  if (hdg != null) document.getElementById('hdg-val').textContent = Math.round(hdg) + '°';
+  document.getElementById('h-spd').textContent = kn.toFixed(1);
+
+  // Position marker
+  updatePosMarker(lat, lng, accuracy);
+
+  if (isTracking) {
+    const pt = { lat, lng, spd: kn, ts: Date.now() };
+    if (lastPt) {
+      const d = distNm(lastPt, pt);
+      if (d > 0.003) {   // ~5.5m threshold
+        totalDist += d;
+        drawSeg(lastPt, pt, kn);
+        document.getElementById('h-dst').textContent = totalDist.toFixed(2);
+        currentTrip.points.push(pt);
+        lastPt = pt;
+      }
+    } else {
+      currentTrip.points.push(pt);
+      lastPt = pt;
+    }
+    // Wind: fetch on start + every 5 min
+    if (!windCache || (Date.now() - windCache.ts) > 300000) {
+      fetchWind(lat, lng).then(w => {
+        if (w && currentTrip) currentTrip.windSamples.push({ ...w, lat, lng });
+      });
+    }
+  }
+}
+
+function onGPSErr(e) {
+  console.warn('GPS err', e);
+  setGpsDot('', 'GPS FOUT');
+  toast('GPS fout — check locatierechten');
+}
+
+// ═══════════════════════════════════════════════
+//  POSITION MARKER
+// ═══════════════════════════════════════════════
+function updatePosMarker(lat, lng, acc) {
+  const ll = [lat, lng];
+  if (!posMarker) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;background:#00c9ff;border:3px solid white;border-radius:50%;box-shadow:0 0 10px #00c9ff88"></div>`,
+      iconSize: [14,14], iconAnchor: [7,7]
+    });
+    posMarker = L.marker(ll, { icon, zIndexOffset: 1000 }).addTo(map);
+    map.setView(ll, 15);
+  } else {
+    posMarker.setLatLng(ll);
+  }
+  if (accCircle) accCircle.setLatLng(ll).setRadius(acc);
+  else accCircle = L.circle(ll, { radius: acc, color:'#00c9ff', fillColor:'#00c9ff', fillOpacity:0.06, weight:1, opacity:0.25 }).addTo(map);
+}
+
+// ═══════════════════════════════════════════════
+//  SCREEN-OFF MODE
+// ═══════════════════════════════════════════════
+async function acquireWakeLock() {
+  // Try Wake Lock API first (Chrome 84+, Android Chrome)
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+      return true;
+    } catch(e) { console.warn('WakeLock failed:', e); }
+  }
+  return false;
+}
+
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+
+// Re-acquire wake lock after page visibility change (Android screen timeout)
+document.addEventListener('visibilitychange', async () => {
+  if (screenOffMode && document.visibilityState === 'visible' && !wakeLock) {
+    await acquireWakeLock();
+  }
+});
+
+async function toggleScreenOff() {
+  screenOffMode = !screenOffMode;
+  const btn = document.getElementById('btn-screenoff');
+  const msg = document.getElementById('screenoff-msg');
+
+  if (screenOffMode) {
+    const got = await acquireWakeLock();
+    btn.classList.add('screen-off-active');
+    msg.classList.add('visible');
+    if (got) {
+      toast('Scherm mag nu uit — GPS loopt door');
+    } else {
+      toast('Wake lock niet gelukt — probeer scherm handmatig te dimmen');
+    }
+  } else {
+    releaseWakeLock();
+    btn.classList.remove('screen-off-active');
+    msg.classList.remove('visible');
+    toast('Scherm-uit modus uitgeschakeld');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  TRACKING
+// ═══════════════════════════════════════════════
+function toggleTracking() {
+  isTracking ? stopTracking() : startTracking();
+}
+
+function startTracking() {
+  isTracking = true;
+  trackStart = Date.now();
+  totalDist = 0;
+  lastPt = null;
+  currentTrip = { points: [], startTime: trackStart, windSamples: [] };
+  liveMaxSpeed = 1;
+  updateLegend(1);
+
+  // Clear old lines
+  map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+
+  document.getElementById('btn-track').className = 'btn-track stop';
+  document.getElementById('track-lbl').innerHTML = '<span class="rec-dot"></span>STOP';
+
+  elapsedTimer = setInterval(tickElapsed, 1000);
+
+  if (!watchId) startGPS();
+  else setGpsDot('tracking', document.getElementById('gps-txt').textContent);
+
+  // Fetch wind immediately
+  if (posMarker) {
+    const p = posMarker.getLatLng();
+    fetchWind(p.lat, p.lng).then(w => { if (w && currentTrip) currentTrip.windSamples.push({ ...w, lat: p.lat, lng: p.lng }); });
+  }
+  toast('Tracking gestart');
+}
+
+function stopTracking() {
+  isTracking = false;
+  clearInterval(elapsedTimer);
+
+  document.getElementById('btn-track').className = 'btn-track start';
+  document.getElementById('track-lbl').textContent = '▶ START';
+  setGpsDot('active', document.getElementById('gps-txt').textContent);
+
+  if (currentTrip && currentTrip.points.length > 2) {
+    saveTrip();
+    toast('Tocht opgeslagen ✓');
+  } else {
+    toast('Te kort — niet opgeslagen');
+  }
+}
+
+function tickElapsed() {
+  if (!trackStart) return;
+  const s = Math.floor((Date.now() - trackStart) / 1000);
+  const m = Math.floor(s / 60), h = Math.floor(m / 60);
+  const mm = String(m % 60).padStart(2,'0'), ss = String(s % 60).padStart(2,'0');
+  document.getElementById('h-time').textContent = h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+// ═══════════════════════════════════════════════
+//  CENTER MAP
+// ═══════════════════════════════════════════════
+function centerMap() {
+  if (posMarker) map.setView(posMarker.getLatLng(), 15);
+}
+
+// ═══════════════════════════════════════════════
+//  SAVE / LOAD
+// ═══════════════════════════════════════════════
+function saveTrip() {
+  const trips = loadTrips();
+  const pts = currentTrip.points;
+  const spds = pts.map(p => p.spd);
+  const simplified = rdp(pts, 0.00005); // keep route shape, reduce storage
+
+  let avgWind = null;
+  if (currentTrip.windSamples.length > 0) {
+    const ws = currentTrip.windSamples;
+    avgWind = { speed: ws.reduce((a,w) => a+w.speed,0)/ws.length, dir: ws[ws.length-1].dir };
+  }
+
+  trips.unshift({
+    id: currentTrip.startTime,
+    startTime: currentTrip.startTime,
+    duration: Date.now() - currentTrip.startTime,
+    distance: totalDist,
+    maxSpeed: Math.max(...spds),
+    avgSpeed: spds.reduce((a,b)=>a+b,0)/spds.length,
+    points: simplified,
+    wind: avgWind
+  });
+
+  if (trips.length > 60) trips.pop();
+  try { localStorage.setItem('sailtrack_v2', JSON.stringify(trips)); } catch(e) { toast('Opslag vol!'); }
+}
+
+function loadTrips() {
+  try { return JSON.parse(localStorage.getItem('sailtrack_v2') || '[]'); } catch { return []; }
+}
+
+function deleteTrip(id, e) {
+  e.stopPropagation();
+  const trips = loadTrips().filter(t => t.id !== id);
+  localStorage.setItem('sailtrack_v2', JSON.stringify(trips));
+  renderTrips();
+  toast('Tocht verwijderd');
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER TRIPS
+// ═══════════════════════════════════════════════
+function renderTrips() {
+  const trips = loadTrips();
+  const el = document.getElementById('trips-list');
+  if (!trips.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⛵</div><div class="empty-txt">Nog geen tochten.<br>Druk START om te beginnen.</div></div>`;
+    return;
+  }
+  el.innerHTML = trips.map(t => {
+    const d = new Date(t.startTime);
+    const dateStr = d.toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' });
+    const timeStr = d.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' });
+    const dm = Math.floor(t.duration / 60000);
+    const durStr = dm >= 60 ? `${Math.floor(dm/60)}u ${dm%60}m` : `${dm}m`;
+    const windStr = t.wind ? `${t.wind.speed.toFixed(1)} kn uit ${deg2cmp(t.wind.dir)}` : 'Geen winddata';
+    return `<div class="trip-card" onclick="viewTrip(${t.id})">
+      <div class="trip-card-top">
+        <div><div class="trip-date">${dateStr}</div><div class="trip-time">${timeStr}</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="trip-dur">${durStr}</span>
+          <button class="trip-del" onclick="deleteTrip(${t.id},event)">✕</button>
+        </div>
+      </div>
+      <div class="trip-stats">
+        <div class="ts"><div class="v">${t.distance.toFixed(2)}</div><div class="l">nm</div></div>
+        <div class="ts"><div class="v">${t.maxSpeed.toFixed(1)}</div><div class="l">max kn</div></div>
+        <div class="ts"><div class="v">${t.avgSpeed.toFixed(1)}</div><div class="l">gem kn</div></div>
+      </div>
+      <div class="trip-wind">🌬️ <span>${windStr}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  VIEW TRIP ON MAP
+// ═══════════════════════════════════════════════
+function viewTrip(id) {
+  const trip = loadTrips().find(t => t.id === id);
+  if (!trip || trip.points.length < 2) return;
+  switchTab('map');
+  map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+  const tripMax = trip.maxSpeed || 1;
+  updateLegend(tripMax);
+  const bounds = [];
+  for (let i = 1; i < trip.points.length; i++) {
+    const a = trip.points[i-1], b = trip.points[i];
+    L.polyline([[a.lat,a.lng],[b.lat,b.lng]], {
+      color: speedColor((a.spd+b.spd)/2, tripMax), weight: 4, opacity: 0.9, lineCap: 'round'
+    }).addTo(map);
+    bounds.push([a.lat,a.lng]);
+  }
+  bounds.push([trip.points[trip.points.length-1].lat, trip.points[trip.points.length-1].lng]);
+  map.fitBounds(bounds, { padding:[40,40] });
+  if (trip.wind) updateWindUI(trip.wind.speed, trip.wind.dir);
+}
+
+// ═══════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════
+function switchTab(t) {
+  const isMap = t === 'map';
+  document.getElementById('map-view').style.display = isMap ? 'flex' : 'none';
+  document.getElementById('trips-view').style.display = isMap ? 'none' : 'block';
+  document.getElementById('tab-map').className = 'tab' + (isMap ? ' active' : '');
+  document.getElementById('tab-trips').className = 'tab' + (!isMap ? ' active' : '');
+  if (isMap) setTimeout(() => map.invalidateSize(), 10);
+  else renderTrips();
+}
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════
+initMap();
+startGPS();
+
+// Passive wind refresh every 10 min when online
+setInterval(() => {
+  if (navigator.onLine && posMarker) {
+    const p = posMarker.getLatLng();
+    fetchWind(p.lat, p.lng);
+  }
+}, 600000);
+</script>
+</body>
+</html>
