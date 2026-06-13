@@ -87,7 +87,7 @@ header {
 
 .sail-hud {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
   flex: 1;
   align-content: start;
@@ -105,6 +105,7 @@ header {
   position: relative;
 }
 
+.hud-block.full-width { grid-column: 1 / -1; }
 .hud-block.accent-border { border-color: var(--accent); }
 .hud-block.gold-border { border-color: var(--gold); }
 .hud-block.wp-reached { border-color: var(--success); animation: wpPulse 0.6s ease 3; }
@@ -129,8 +130,8 @@ header {
 
 .hud-value.gold { color: var(--gold); }
 .hud-value.success { color: var(--success); }
-.hud-value.medium { font-size: 52px; }
-.hud-value.small { font-size: 38px; }
+.hud-value.medium { font-size: 38px; }
+.hud-value.small { font-size: 26px; }
 
 .hud-unit {
   font-size: 11px; color: var(--muted); letter-spacing: 1px;
@@ -572,9 +573,10 @@ header {
       <div class="hud-unit">knots</div>
     </div>
     <div class="hud-block">
-      <div class="hud-label">Max Speed</div>
-      <div class="hud-value small gold" id="sail-maxspeed">0.0</div>
-      <div class="hud-unit">knots</div>
+      <div class="hud-label">VMG Wind</div>
+      <div class="hud-value small" id="sail-vmgwind" style="color:var(--accent)">—</div>
+      <div class="hud-unit" id="sail-vmgwind-unit">knots</div>
+      <div class="hud-sub" id="sail-vmgwind-dir">no wind data</div>
     </div>
   </div>
   <!-- Tracking button also here -->
@@ -1221,6 +1223,7 @@ function degToCompass(deg) {
 }
 
 function updateWindUI(speed, dir) {
+  setTimeout(calcWindVMG, 100); // recalc VMG when wind updates
   document.getElementById('wind-speed').textContent = speed.toFixed(1);
   document.getElementById('wind-dir').textContent = degToCompass(dir) + ' ' + Math.round(dir) + '°';
   document.getElementById('wind-arrow').style.transform = `rotate(${dir}deg)`;
@@ -1267,6 +1270,7 @@ function onPosition(pos) {
 
   updatePositionMarker(lat, lng, accuracy);
   updateWpOverlay();
+  calcWindVMG();
   checkWaypointProximity({ lat, lng });
 
   if (isTracking) {
@@ -1593,6 +1597,41 @@ function toastWp(msg) {
   el.className = 'toast show wp-toast';
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ============================================================
+//  WIND VMG
+// ============================================================
+function calcWindVMG() {
+  if (!windCache || heading === null || currentSpeed === null) return;
+  // Angle between boat COG and wind direction
+  const windDir = windCache.dir;
+  const diff = ((windDir - heading) + 360) % 360;
+  // Normalise to -180..180
+  const angle = diff > 180 ? diff - 360 : diff;
+  const angleRad = angle * Math.PI / 180;
+  const vmg = currentSpeed * Math.cos(angleRad);
+
+  const el = document.getElementById('sail-vmgwind');
+  const unit = document.getElementById('sail-vmgwind-unit');
+  const dir = document.getElementById('sail-vmgwind-dir');
+  if (!el) return;
+
+  el.textContent = Math.abs(vmg).toFixed(1);
+
+  if (vmg > 0.2) {
+    el.style.color = 'var(--success)';
+    unit.textContent = 'kn upwind';
+    dir.textContent = '▲ toward wind';
+  } else if (vmg < -0.2) {
+    el.style.color = 'var(--gold)';
+    unit.textContent = 'kn downwind';
+    dir.textContent = '▼ away from wind';
+  } else {
+    el.style.color = 'var(--muted)';
+    unit.textContent = 'knots';
+    dir.textContent = '→ across wind';
+  }
 }
 
 // ============================================================
