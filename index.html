@@ -536,7 +536,7 @@ header {
   </div>
   <div class="control-bar">
     <button class="btn-center" id="btn-center" onclick="centerMap()" title="Center map">⊕</button>
-    <button class="btn-center" onclick="openInOpenCPN()" title="Open in OpenCPN" style="font-size:14px;">🗺️</button>
+    <button class="btn-center" id="btn-chart" onclick="toggleNauticalChart()" title="Nautical chart" style="font-size:14px;">🗺️</button>
     <button class="btn-track start" id="btn-track" onclick="toggleTracking()">
       <span id="track-label">▶ START SAILING</span>
     </button>
@@ -676,10 +676,10 @@ header {
     <div class="settings-section-title">Chart Apps</div>
     <div class="settings-row">
       <div class="settings-row-label">
-        <div class="settings-row-name">Open in OpenCPN</div>
-        <div class="settings-row-desc">Open current position in OpenCPN chart plotter</div>
+        <div class="settings-row-name">Nautical Chart</div>
+        <div class="settings-row-desc">Toggle OpenSeaMap nautical overlay on map</div>
       </div>
-      <button class="btn-sm accent" onclick="openInOpenCPN()">OPEN</button>
+      <button class="btn-sm accent" onclick="toggleNauticalChart()">TOGGLE</button>
     </div>
     <div class="settings-row">
       <div class="settings-row-label">
@@ -786,10 +786,46 @@ function saveSetting(key, val) {
 // ============================================================
 //  INIT MAPS
 // ============================================================
+let baseLayer = null;
+let nauticalLayer = null;
+let seamarkLayer = null;
+let nauticalMode = false;
+
 function initMap() {
   map = L.map('map', { center: [52.5, 4.5], zoom: 13, zoomControl: false, attributionControl: false });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+
+  baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+  nauticalLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 1 });
+
+  // OpenStreetMap base for nautical mode (lighter, better under seamarks)
+  const osmBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+
+  map._osmBase = osmBase;
+  baseLayer.addTo(map);
   map.on('click', onMainMapClick);
+}
+
+function toggleNauticalChart() {
+  const btn = document.getElementById('btn-chart');
+  nauticalMode = !nauticalMode;
+  if (nauticalMode) {
+    map.removeLayer(baseLayer);
+    map._osmBase.addTo(map);
+    nauticalLayer.addTo(map);
+    btn.style.color = 'var(--gold)';
+    btn.style.borderColor = 'var(--gold)';
+    // Remove dark tile filter in nautical mode
+    document.querySelector('.leaflet-tile-pane').style.filter = 'none';
+    toast('Nautical chart: ON');
+  } else {
+    map.removeLayer(map._osmBase);
+    map.removeLayer(nauticalLayer);
+    baseLayer.addTo(map);
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    document.querySelector('.leaflet-tile-pane').style.filter = 'brightness(0.8) saturate(0.7) hue-rotate(10deg)';
+    toast('Dark map: ON');
+  }
 }
 
 function initWpMap() {
@@ -1603,19 +1639,6 @@ document.addEventListener('visibilitychange', async () => {
 // ============================================================
 //  CHART APPS
 // ============================================================
-function openInOpenCPN() {
-  if (!currentPos) { toast('No GPS position yet'); return; }
-  // Use geo: URI — Android resolves this directly to OpenCPN if it is installed
-  // and set as the default handler for geo: links
-  const geoUrl = `geo:${currentPos.lat.toFixed(6)},${currentPos.lng.toFixed(6)}?q=${currentPos.lat.toFixed(6)},${currentPos.lng.toFixed(6)}(SailTrack)`;
-  const a = document.createElement('a');
-  a.href = geoUrl;
-  a.target = '_blank';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  toast('Opening chart app…');
-}
 
 function openInNavionics() {
   if (!currentPos) { toast('No GPS position yet'); return; }
