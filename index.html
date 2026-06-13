@@ -536,6 +536,7 @@ header {
   </div>
   <div class="control-bar">
     <button class="btn-center" id="btn-center" onclick="centerMap()" title="Center map">⊕</button>
+    <button class="btn-center" onclick="openInOpenCPN()" title="Open in OpenCPN" style="font-size:14px;">🗺️</button>
     <button class="btn-track start" id="btn-track" onclick="toggleTracking()">
       <span id="track-label">▶ START SAILING</span>
     </button>
@@ -1604,11 +1605,16 @@ document.addEventListener('visibilitychange', async () => {
 // ============================================================
 function openInOpenCPN() {
   if (!currentPos) { toast('No GPS position yet'); return; }
-  const url = `opencpn://goto?lat=${currentPos.lat.toFixed(6)}&lon=${currentPos.lng.toFixed(6)}`;
+  // Use geo: URI — Android resolves this directly to OpenCPN if it is installed
+  // and set as the default handler for geo: links
   const geoUrl = `geo:${currentPos.lat.toFixed(6)},${currentPos.lng.toFixed(6)}?q=${currentPos.lat.toFixed(6)},${currentPos.lng.toFixed(6)}(SailTrack)`;
-  window.location.href = url;
-  setTimeout(() => { if (document.hasFocus()) window.location.href = geoUrl; }, 800);
-  toast('Opening OpenCPN…');
+  const a = document.createElement('a');
+  a.href = geoUrl;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  toast('Opening chart app…');
 }
 
 function openInNavionics() {
