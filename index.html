@@ -447,6 +447,7 @@ header {
 .leaflet-container { background: #0d1a2e; }
 .leaflet-control-zoom { display: none; }
 .leaflet-tile { filter: brightness(0.8) saturate(0.7) hue-rotate(10deg); }
+.sailtrack-pos-icon { background: none !important; border: none !important; }
 </style>
 </head>
 <body>
@@ -1307,6 +1308,11 @@ function onPosition(pos) {
   calcWindVMG();
   checkWaypointProximity({ lat, lng });
 
+  // Fetch wind on first fix and refresh every 10 minutes — regardless of tracking
+  if (!windCache || (Date.now() - windCache.ts) > 600000) {
+    fetchWind(lat, lng);
+  }
+
   if (isTracking) {
     const pt = { lat, lng, spd: speedKnots, ts: Date.now() };
     if (lastPoint) {
@@ -1326,7 +1332,7 @@ function onPosition(pos) {
 
     if (!windCache || (Date.now() - windCache.ts) > 300000) {
       fetchWind(lat, lng).then(w => { if (w && currentTrip) currentTrip.windSamples.push({ ...w, lat, lng }); });
-    }
+    } // wind also fetched above on every position update
   }
 }
 
@@ -1342,9 +1348,18 @@ function updatePositionMarker(lat, lng, accuracy) {
   const latlng = [lat, lng];
   if (!currentMarker) {
     const icon = L.divIcon({
-      className: '',
-      html: `<div style="width:16px;height:16px;background:#00c9ff;border:3px solid white;border-radius:50%;box-shadow:0 0 12px #00c9ff;"></div>`,
-      iconSize: [16,16], iconAnchor: [8,8]
+      className: 'sailtrack-pos-icon',
+      html: `<div style="
+        width:16px;height:16px;
+        background:#00c9ff;
+        border:3px solid white;
+        border-radius:50%;
+        box-shadow:0 0 12px #00c9ff;
+        position:relative;
+        left:-8px;top:-8px;
+      "></div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0]
     });
     currentMarker = L.marker(latlng, { icon, zIndexOffset: 1000 }).addTo(map);
     map.setView(latlng, 15);
