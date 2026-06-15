@@ -425,6 +425,7 @@ let elTimer = null;
 let waypoints = [];
 let activeWpIdx = 0;
 let wpMarkersMain = [], wpMarkersWp = [];
+let wpPosMarker = null;
 let wpRouteMain = null, wpRouteWp = null;
 let wpBearingLine = null;
 let pickMode = false, pendingLatLng = null;
@@ -451,7 +452,7 @@ function showTab(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   document.getElementById('view-' + name).classList.add('active');
-  if (name === 'wp')  { initWpMap(); setTimeout(() => wpMap && wpMap.invalidateSize(), 100); }
+  if (name === 'wp')  { initWpMap(); setTimeout(() => { if(wpMap) { wpMap.invalidateSize(); updateWpPos(); } }, 100); }
   if (name === 'map') { setTimeout(() => { if(map) map.invalidateSize(); }, 50); }
   if (name === 'trips') { renderTrips(); }
 }
@@ -475,6 +476,24 @@ function initWpMap() {
   wpBaseLayer.addTo(wpMap);
   wpMap.on('click', onWpMapClick);
   renderWpMapMarkers();
+  updateWpPos();
+}
+
+function updateWpPos() {
+  if (!wpMap || !currentPos) return;
+  const ll = L.latLng(currentPos.lat, currentPos.lng);
+  if (!wpPosMarker) {
+    const icon = L.divIcon({
+      className: 'pos-icon',
+      html: '<div style="width:16px;height:16px;background:#00c9ff;border:3px solid white;border-radius:50%;box-shadow:0 0 14px #00c9ff;margin-left:-8px;margin-top:-8px"></div>',
+      iconSize:[0,0], iconAnchor:[0,0]
+    });
+    wpPosMarker = L.marker(ll, { icon, zIndexOffset:2000 }).addTo(wpMap);
+    // Centre on position if no waypoints define the view
+    if (!waypoints.length) wpMap.setView(ll, 14);
+  } else {
+    wpPosMarker.setLatLng(ll);
+  }
 }
 
 // ── CHART TOGGLE ─────────────────────────────────────────────
@@ -569,6 +588,9 @@ function onPos(p) {
 
   // Wind (on first fix, then every 10min)
   if (!windCache || Date.now() - windCache.ts > 600000) fetchWind(lat, lng);
+
+  // Update position on wp map if open
+  updateWpPos();
 
   // Waypoint proximity check
   checkWpProximity();
