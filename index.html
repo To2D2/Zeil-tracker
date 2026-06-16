@@ -702,7 +702,7 @@ async function fetchWind(lat, lng) {
 function showWind(spd, dir) {
   document.getElementById('wind-spd').textContent   = spd.toFixed(1);
   document.getElementById('wind-dir').textContent   = compass(dir) + ' ' + Math.round(dir) + '°';
-  document.getElementById('wind-arrow').style.transform = `rotate(${dir}deg)`;
+  document.getElementById('wind-arrow').style.transform = `rotate(${(dir+180)%360}deg)`;
 }
 
 function compass(d) {
