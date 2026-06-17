@@ -245,7 +245,7 @@ header{background:var(--deep);border-bottom:1px solid var(--border);padding:8px 
     <div class="map-overlay legend-box">
       <div class="legend-lbl">Speed (kn)</div>
       <div class="legend-bar"></div>
-      <div class="legend-nums"><span>0</span><span>5</span><span>10+</span></div>
+      <div class="legend-nums"><span>0</span><span id="legend-mid">5</span><span id="legend-max">10+</span></div>
     </div>
 
     <!-- gps status -->
@@ -567,7 +567,7 @@ function onPos(p) {
   const spd = speed ? speed * 1.94384 : 0;
   currentPos = { lat, lng };
   currentSpeed = spd;
-  if (spd > maxSpeed) maxSpeed = spd;
+  if (spd > maxSpeed) { maxSpeed = spd; updateLegend(); }
   if (hdg !== null && hdg !== undefined) {
     currentHeading = hdg;
     document.getElementById('hdg-val').textContent = Math.round(hdg) + '°';
@@ -634,6 +634,7 @@ function startTracking() {
   isTracking = true;
   trackStart = Date.now();
   totalDist = 0; lastPt = null; maxSpeed = 0;
+  updateLegend();
   currentTrip = { points:[], startTime:trackStart, windSamples:[] };
   // Clear old track lines
   trackLines.forEach(l => map.removeLayer(l));
@@ -671,8 +672,18 @@ function tickTimer() {
 }
 
 // ── TRACK DRAWING ─────────────────────────────────────────────
-function spdColor(kn) {
-  const t = Math.min(kn/10, 1);
+function updateLegend() {
+  const max = Math.max(maxSpeed, 1);
+  const mid = document.getElementById('legend-mid');
+  const top = document.getElementById('legend-max');
+  if (mid) mid.textContent = (max/2).toFixed(1);
+  if (top) top.textContent = max.toFixed(1);
+}
+
+function spdColor(kn, scaleMax) {
+  // Auto-scale to the trip's max speed so far (minimum 1kn to avoid divide issues)
+  const max = scaleMax || Math.max(maxSpeed, 1);
+  const t = Math.min(kn/max, 1);
   let r,g,b;
   if (t < .5) { const s=t*2; r=Math.round(s*255); g=255; b=Math.round(136*(1-s)); }
   else         { const s=(t-.5)*2; r=255; g=Math.round(255*(1-s)+68*s); b=0; }
@@ -962,15 +973,17 @@ function viewTrip(id) {
   showTab('map');
   trackLines.forEach(l=>map.removeLayer(l)); trackLines=[];
   const bounds=[];
+  const tripMax = Math.max(trip.maxSpeed, 1);
   for (let i=1;i<trip.points.length;i++) {
     const p1=trip.points[i-1],p2=trip.points[i];
-    const l = L.polyline([[p1.lat,p1.lng],[p2.lat,p2.lng]],{color:spdColor((p1.spd+p2.spd)/2),weight:4,opacity:.9,lineCap:'round'}).addTo(map);
+    const l = L.polyline([[p1.lat,p1.lng],[p2.lat,p2.lng]],{color:spdColor((p1.spd+p2.spd)/2, tripMax),weight:4,opacity:.9,lineCap:'round'}).addTo(map);
     trackLines.push(l);
     bounds.push([p1.lat,p1.lng]);
   }
   bounds.push([trip.points[trip.points.length-1].lat,trip.points[trip.points.length-1].lng]);
   map.fitBounds(bounds,{padding:[40,40]});
   if (trip.wind) showWind(trip.wind.speed,trip.wind.dir);
+  maxSpeed = tripMax; updateLegend();
 }
 
 function delTrip(id,e) {
