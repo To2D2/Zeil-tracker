@@ -3,629 +3,935 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0a1628">
-<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#060f1e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>SailTrack</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <style>
 :root {
-  --navy:   #0a1628;
-  --deep:   #0d1f3c;
-  --panel:  #111e35;
-  --border: #1e3358;
+  --navy: #060f1e;
+  --deep: #0a1628;
+  --panel: #0d1c30;
+  --card: #111e35;
+  --border: #1a2e4a;
   --accent: #00c9ff;
-  --gold:   #f0c040;
+  --accent2: #0077b6;
+  --gold: #f0c040;
   --danger: #e63946;
-  --success:#06d6a0;
-  --muted:  #5a7aaa;
-  --text:   #cde0f5;
-  --fn: 'Rajdhani', sans-serif;
-  --fm: 'Space Mono', monospace;
+  --success: #06d6a0;
+  --warn: #ff9f1c;
+  --text: #cde0f5;
+  --muted: #4a6a8a;
+  --font-ui: 'Rajdhani', sans-serif;
+  --font-mono: 'Space Mono', monospace;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--navy);color:var(--text);font-family:var(--fn);height:100dvh;display:flex;flex-direction:column;overflow:hidden;user-select:none}
 
-/* HEADER */
-header{background:var(--deep);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.logo{display:flex;align-items:center;gap:8px}
-.logo-text{font-size:20px;font-weight:700;letter-spacing:3px;color:var(--accent)}
-.logo-sub{font-size:9px;color:var(--muted);letter-spacing:2px}
-.hdr-stats{display:flex;gap:14px}
-.hdr-stat .v{font-family:var(--fm);font-size:15px;font-weight:700;color:var(--accent);line-height:1}
-.hdr-stat .l{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-/* TABS */
-.tabs{display:flex;background:var(--deep);border-bottom:1px solid var(--border);flex-shrink:0}
-.tab{flex:1;padding:9px 2px;text-align:center;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+html, body {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--navy);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
 
-/* VIEWS */
-.view{display:none!important;flex:1;flex-direction:column;overflow:hidden}
-.view.active{display:flex!important}
+body { display: flex; flex-direction: column; }
 
-/* MAP */
-#map-wrap{flex:1;position:relative;display:flex;flex-direction:column}
-#map{flex:1;width:100%;min-height:200px}
+/* ── HEADER ── */
+header {
+  background: var(--deep);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 1000;
+}
 
-/* MAP OVERLAYS */
-.map-overlay{position:absolute;z-index:800;background:rgba(10,22,40,.88);border:1px solid var(--border);border-radius:10px;backdrop-filter:blur(6px)}
-.wind-box{top:10px;right:10px;padding:10px 14px;min-width:130px}
-.wind-title{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
-.wind-row{display:flex;align-items:center;gap:8px}
-.wind-arrow{font-size:24px;color:var(--gold);transition:transform .8s ease;display:block}
-.wind-vals .ws{font-family:var(--fm);font-size:18px;font-weight:700;color:var(--accent);line-height:1}
-.wind-vals .wu{font-size:9px;color:var(--muted);letter-spacing:1px}
-.wind-vals .wd{font-size:11px;color:var(--text);margin-top:2px}
-.hdg-box{top:10px;left:10px;padding:8px 12px}
-.hdg-lbl{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px}
-.hdg-val{font-family:var(--fm);font-size:20px;font-weight:700;color:var(--gold)}
-.gps-box{bottom:72px;right:10px;padding:6px 10px;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);letter-spacing:1px}
-.gps-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
-.gps-dot.ready{background:var(--success);animation:pulse 1.2s infinite}
-.gps-dot.tracking{background:var(--danger);animation:pulse .8s infinite}
-.legend-box{bottom:72px;left:10px;padding:7px 10px}
-.legend-lbl{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
-.legend-bar{width:90px;height:7px;border-radius:4px;background:linear-gradient(to right,#00ff88,#ffdd00,#ff4400);margin-bottom:2px}
-.legend-nums{display:flex;justify-content:space-between;font-family:var(--fm);font-size:9px;color:var(--muted)}
-.wp-status{bottom:72px;left:50%;transform:translateX(-50%);padding:6px 14px;display:none;align-items:center;gap:10px;border-color:var(--gold)}
-.wp-status.show{display:flex}
-.wp-stat{text-align:center}
-.wp-stat .sv{font-family:var(--fm);font-size:14px;font-weight:700;color:var(--gold)}
-.wp-stat .sl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
-.wp-div{width:1px;height:26px;background:var(--border)}
-.pick-banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:900;background:var(--gold);color:var(--navy);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:none;white-space:nowrap}
-.pick-banner.show{display:block}
+.logo { display: flex; align-items: center; gap: 8px; }
 
-/* CONTROL BAR */
-.ctrl-bar{background:var(--panel);border-top:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
-.btn-icon{width:46px;height:46px;border:1px solid var(--border);border-radius:10px;background:var(--deep);color:var(--accent);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
-.btn-icon:active{background:var(--border)}
-.btn-icon.gold{color:var(--gold);border-color:var(--gold)}
-.btn-track{flex:1;padding:13px;border:none;border-radius:10px;font-family:var(--fn);font-size:15px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s}
-.btn-track.start{background:linear-gradient(135deg,#06d6a0,#0077b6);color:#fff}
-.btn-track.stop{background:linear-gradient(135deg,#e63946,#c1121f);color:#fff}
-.rec-dot{width:9px;height:9px;background:#fff;border-radius:50%;display:inline-block;margin-right:7px;animation:pulse .8s infinite}
+.logo svg { width: 28px; height: 28px; }
 
-/* SAIL VIEW */
-#sail-view{background:var(--navy);padding:10px}
-.sail-grid{display:grid;grid-template-columns:1fr;gap:8px;flex:1}
-.hud{background:var(--panel);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 8px 10px;position:relative}
-.hud.accent{border-color:var(--accent)}
-.hud.gold{border-color:var(--gold)}
-.hud-lbl{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
-.hud-val{font-family:var(--fm);font-weight:700;line-height:1;color:var(--accent)}
-.hud-val.xl{font-size:68px}
-.hud-val.lg{font-size:52px}
-.hud-val.md{font-size:38px}
-.hud-val.gold{color:var(--gold)}
-.hud-val.green{color:var(--success)}
-.hud-unit{font-size:13px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:3px}
-.hud-sub{font-size:11px;color:var(--muted);margin-top:3px}
-.wp-badge{position:absolute;top:8px;right:10px;font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase}
-.vmg-wrap{width:75%;height:6px;background:var(--border);border-radius:3px;margin-top:6px;overflow:hidden}
-.vmg-fill{height:100%;border-radius:3px;background:linear-gradient(to right,var(--accent),var(--success));transition:width .5s}
-.sail-ctrl{padding:8px 0 2px}
+.logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--accent);
+  text-transform: uppercase;
+  line-height: 1;
+}
 
-/* WAYPOINTS VIEW */
-#wp-view{overflow:hidden}
-.wp-toolbar{background:var(--panel);border-bottom:1px solid var(--border);padding:8px 10px;display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap}
-.btn-sm{padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--deep);color:var(--text);font-family:var(--fn);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap}
-.btn-sm:active{background:var(--border)}
-.btn-sm.accent{border-color:var(--accent);color:var(--accent)}
-.btn-sm.danger{border-color:var(--danger);color:var(--danger)}
-.btn-sm.gold{border-color:var(--gold);color:var(--gold)}
-#wp-map{flex:1;min-height:0}
-.wp-panel{background:var(--panel);border-top:1px solid var(--border);max-height:200px;overflow-y:auto;flex-shrink:0}
-.wp-list-hdr{padding:7px 12px 3px;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;display:flex;justify-content:space-between}
-.wp-item{display:flex;align-items:center;gap:9px;padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px}
-.wp-item:last-child{border-bottom:none}
-.wp-num{width:22px;height:22px;border-radius:50%;background:var(--gold);color:var(--navy);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.wp-num.cur{background:var(--accent)}
-.wp-info{flex:1}
-.wp-name{font-weight:600;color:var(--text);font-size:13px}
-.wp-coords{font-family:var(--fm);font-size:10px;color:var(--muted)}
-.wp-acts{display:flex;gap:4px}
-.wp-btn{border:none;background:transparent;cursor:pointer;font-size:13px;padding:2px 4px}
-.wp-empty{padding:18px;text-align:center;font-size:12px;color:var(--muted)}
-.wp-form{background:var(--deep);border-top:1px solid var(--border);padding:9px 12px;display:none;gap:8px;align-items:flex-end;flex-wrap:wrap;flex-shrink:0}
-.wp-form.open{display:flex}
-.wp-field{display:flex;flex-direction:column;gap:3px;flex:1;min-width:90px}
-.wp-field label{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
-.wp-field input{background:var(--panel);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--fm);font-size:13px;padding:7px 9px;width:100%}
-.wp-field input:focus{outline:none;border-color:var(--accent)}
+.logo-sub {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
 
-/* TRIPS VIEW */
-#trips-view{overflow-y:auto;padding:12px}
-.trip-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;cursor:pointer}
-.trip-hdr{padding:10px 13px;display:flex;align-items:center;justify-content:space-between}
-.trip-date{font-size:13px;font-weight:600}
-.trip-dur{font-family:var(--fm);font-size:12px;color:var(--accent)}
-.trip-stats{display:flex;border-top:1px solid var(--border)}
-.trip-stat{flex:1;padding:7px;text-align:center;border-right:1px solid var(--border)}
-.trip-stat:last-child{border-right:none}
-.trip-stat .v{font-family:var(--fm);font-size:13px;font-weight:700;color:var(--accent)}
-.trip-stat .l{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
-.trip-foot{display:flex;justify-content:space-between;align-items:center;padding:4px 13px 8px;font-size:11px;color:var(--muted)}
-.trip-del{border:1px solid #3a1a1a;border-radius:5px;background:transparent;color:var(--danger);font-size:11px;cursor:pointer;padding:3px 7px;font-family:var(--fn)}
-.empty-state{text-align:center;padding:50px 20px;color:var(--muted)}
-.empty-icon{font-size:44px;margin-bottom:10px}
+.hdr-stats { display: flex; gap: 14px; }
 
-/* SETTINGS VIEW */
-#settings-view{overflow-y:auto;padding:12px}
-.s-section{background:var(--panel);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden}
-.s-title{padding:9px 13px;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)}
-.s-row{display:flex;align-items:center;padding:11px 13px;border-bottom:1px solid var(--border);gap:10px}
-.s-row:last-child{border-bottom:none}
-.s-lbl{flex:1}
-.s-name{font-size:14px;font-weight:600;color:var(--text)}
-.s-desc{font-size:11px;color:var(--muted);margin-top:1px}
-.s-row input[type=number]{background:var(--deep);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--fm);font-size:14px;padding:5px 9px;width:72px;text-align:center}
-.s-row input[type=number]:focus{outline:none;border-color:var(--accent)}
+.hstat { text-align: center; }
+.hstat .v {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+.hstat .l { font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
 
-/* MODAL */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:5000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
-.modal-bg.open{opacity:1;pointer-events:all}
-.modal{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;width:min(320px,92vw)}
-.modal-title{font-size:16px;font-weight:700;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:14px}
-.modal-field{display:flex;flex-direction:column;gap:4px;margin-bottom:11px}
-.modal-field label{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
-.modal-field input{background:var(--deep);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--fm);font-size:14px;padding:8px 11px}
-.modal-field input:focus{outline:none;border-color:var(--accent)}
-.modal-acts{display:flex;gap:8px;margin-top:14px}
-.modal-acts button{flex:1;padding:11px;border-radius:9px;border:1px solid var(--border);font-family:var(--fn);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
-.modal-cancel{background:var(--deep);color:var(--muted)}
-.modal-ok{background:var(--accent);color:var(--navy);border-color:var(--accent)}
+/* ── TABS ── */
+.tabs {
+  display: flex;
+  background: var(--deep);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
 
-/* TOAST */
-.toast{position:fixed;bottom:86px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--panel);border:1px solid var(--accent);color:var(--accent);padding:9px 18px;border-radius:20px;font-size:13px;letter-spacing:1px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.toast.wp{border-color:var(--gold);color:var(--gold)}
+.tab {
+  flex: 1;
+  padding: 9px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-/* MISC */
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
-.leaflet-container{background:#0d1a2e}
-.leaflet-control-zoom{display:none}
-.pos-icon{background:none!important;border:none!important}
+/* ── MAP VIEW ── */
+#map-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#map { flex: 1; position: relative; }
+
+/* Overlays */
+.map-overlay {
+  position: absolute;
+  z-index: 800;
+  background: rgba(6,15,30,0.88);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  padding: 8px 12px;
+}
+
+.wind-overlay { top: 10px; right: 10px; min-width: 120px; }
+.wind-title { font-size: 8px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
+.wind-row { display: flex; align-items: center; gap: 8px; }
+.wind-arrow { font-size: 22px; color: var(--gold); transition: transform 0.8s ease; display: block; }
+.wind-speed-v { font-family: var(--font-mono); font-size: 17px; font-weight: 700; color: var(--accent); line-height: 1; }
+.wind-unit { font-size: 8px; color: var(--muted); letter-spacing: 1px; }
+.wind-dir-t { font-size: 10px; color: var(--text); margin-top: 1px; }
+.wind-offline { font-size: 9px; color: var(--muted); font-style: italic; margin-top: 3px; }
+
+.hdg-overlay { top: 10px; left: 10px; }
+.hdg-title { font-size: 8px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+.hdg-val { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--gold); }
+
+.legend-overlay { bottom: 78px; left: 10px; padding: 7px 10px; }
+.legend-title { font-size: 8px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+.legend-bar { width: 96px; height: 7px; border-radius: 4px; background: linear-gradient(to right,#00ff88,#ffdd00,#ff4400); margin-bottom: 3px; }
+.legend-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 8px; color: var(--muted); }
+
+.gps-overlay {
+  bottom: 78px; right: 10px;
+  padding: 6px 10px;
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; color: var(--muted); letter-spacing: 1px;
+}
+.gps-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.gps-dot.active { background: var(--success); animation: blink 1.4s infinite; }
+.gps-dot.tracking { background: var(--danger); animation: blink 0.8s infinite; }
+
+/* Screen-off indicator */
+.screenoff-overlay {
+  bottom: 78px; left: 50%; transform: translateX(-50%);
+  padding: 6px 12px;
+  font-size: 10px; color: var(--warn);
+  letter-spacing: 1px; text-transform: uppercase;
+  display: none;
+  white-space: nowrap;
+}
+.screenoff-overlay.visible { display: block; }
+
+@keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.7)} }
+
+/* ── CONTROL BAR ── */
+.control-bar {
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  width: 46px; height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--deep);
+  color: var(--accent);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+}
+.btn-icon:active { background: var(--border); }
+
+.btn-icon .badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  width: 14px; height: 14px;
+  background: var(--danger);
+  border-radius: 50%;
+  font-size: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-family: var(--font-mono);
+  display: none;
+}
+.btn-icon.screen-off-active { color: var(--warn); border-color: var(--warn); }
+
+.btn-track {
+  flex: 1; padding: 13px;
+  border: none; border-radius: 10px;
+  font-family: var(--font-ui);
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.btn-track.start { background: linear-gradient(135deg,#06d6a0,#0077b6); color: white; }
+.btn-track.stop  { background: linear-gradient(135deg,#e63946,#c1121f); color: white; }
+.btn-track:active::after { content:''; position:absolute; inset:0; background:white; opacity:0.15; }
+
+.rec-dot {
+  width: 9px; height: 9px;
+  background: white; border-radius: 50%;
+  display: inline-block; margin-right: 7px;
+  animation: blink 0.9s infinite;
+}
+
+/* ── TRIPS VIEW ── */
+#trips-view { display: none; flex: 1; overflow-y: auto; padding: 12px; }
+
+.trips-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.trips-title { font-size: 17px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+
+.trip-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.trip-card:active { border-color: var(--accent); }
+
+.trip-card-top {
+  padding: 11px 13px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.trip-date { font-size: 13px; font-weight: 600; color: var(--text); }
+.trip-time { font-size: 11px; color: var(--muted); }
+.trip-dur { font-family: var(--font-mono); font-size: 12px; color: var(--accent); }
+
+.trip-stats { display: flex; border-top: 1px solid var(--border); }
+.ts { flex:1; padding:7px; text-align:center; border-right: 1px solid var(--border); }
+.ts:last-child { border-right: none; }
+.ts .v { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--accent); }
+.ts .l { font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+.trip-wind { padding: 5px 13px 9px; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+.trip-wind span { color: var(--gold); font-weight: 600; }
+
+.trip-del { padding: 5px 9px; border: 1px solid #2a1010; border-radius: 6px; background: transparent; color: var(--danger); font-size: 11px; cursor: pointer; font-family: var(--font-ui); letter-spacing: 1px; }
+
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-icon { font-size: 44px; margin-bottom: 10px; }
+.empty-txt { font-size: 13px; letter-spacing: 1px; line-height: 1.8; }
+
+/* ── OFFLINE BANNER ── */
+.offline-banner {
+  background: #1a1000;
+  border-bottom: 1px solid #3a2500;
+  color: var(--warn);
+  text-align: center;
+  padding: 5px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: none;
+  flex-shrink: 0;
+}
+.offline-banner.show { display: block; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 86px; left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--card);
+  border: 1px solid var(--accent2);
+  color: var(--accent);
+  padding: 9px 18px;
+  border-radius: 20px;
+  font-size: 12px; letter-spacing: 1px;
+  z-index: 9999; opacity: 0;
+  transition: all 0.25s; pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Leaflet */
+.leaflet-container { background: #06101e; }
+.leaflet-control-zoom { display: none; }
+.leaflet-tile { filter: brightness(0.75) saturate(0.6) hue-rotate(8deg); }
+.leaflet-attribution-flag { display: none !important; }
+
+/* Chart mode — light basemap, no dark filter */
+body.chart-mode .leaflet-tile { filter: none; }
+body.chart-mode .leaflet-container { background: #d4e8f0; }
+.btn-icon.chart-active { color: var(--gold); border-color: var(--gold); }
+
+/* ── INSTRUMENT VIEW ── */
+#sail-view {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--navy);
+}
+
+/* In landscape: 3 columns. In portrait: 3 rows */
+.instruments {
+  flex: 1;
+  display: flex;
+  flex-direction: column;   /* portrait default */
+}
+
+@media (orientation: landscape) {
+  .instruments { flex-direction: row; }
+}
+
+.instr-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  padding: 4px;
+}
+
+@media (orientation: landscape) {
+  .instr-cell {
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+  }
+  .instr-cell:last-child { border-right: none; }
+}
+
+.instr-cell:last-child { border-bottom: none; }
+
+.instr-label {
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.instr-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+  /* Scale to fill: use min of vw/vh to work in both orientations */
+  font-size: min(18vw, 28vh);
+}
+
+@media (orientation: landscape) {
+  .instr-value { font-size: min(9vw, 26vh); }
+  .instr-label  { font-size: min(1.2vw, 2vh); letter-spacing: 4px; }
+}
+
+.instr-unit {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+@media (orientation: landscape) {
+  .instr-unit { font-size: min(1.2vw, 2vh); }
+}
+
+/* colour per instrument */
+.instr-cell.cog  .instr-value { color: var(--gold); }
+.instr-cell.spd  .instr-value { color: var(--accent); }
+.instr-cell.vmg  .instr-value { color: var(--success); }
+.instr-cell.vmg.negative .instr-value { color: var(--warn); }
+
+/* sail control bar — same as map control bar but thinner in landscape */
+.sail-bar {
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+@media (orientation: landscape) {
+  .sail-bar { padding: 5px 14px; }
+}
+
+.sail-bar .btn-track { flex: 1; padding: 10px; }
+
+/* Wake lock status dot in header */
+.wake-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  display: inline-block;
+  margin-left: 4px;
+  vertical-align: middle;
+}
 </style>
 </head>
 <body>
 
+<div class="offline-banner" id="offline-banner">⚠ Offline — kaart & wind niet beschikbaar</div>
+
 <header>
   <div class="logo">
-    <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
-      <path d="M16 4L16 26" stroke="#00c9ff" stroke-width="1.5"/>
-      <path d="M16 6L26 22L16 22Z" fill="#00c9ff" opacity=".8"/>
-      <path d="M6 28L26 28" stroke="#0077b6" stroke-width="2" stroke-linecap="round"/>
+    <svg viewBox="0 0 28 28" fill="none">
+      <path d="M14 3 L14 24" stroke="#00c9ff" stroke-width="1.5"/>
+      <path d="M14 4 L24 20 L14 20 Z" fill="#00c9ff" opacity="0.75"/>
+      <path d="M5 26 L23 26" stroke="#0077b6" stroke-width="2" stroke-linecap="round"/>
     </svg>
-    <div><div class="logo-text">SailTrack</div><div class="logo-sub">GPS Navigator</div></div>
+    <div>
+      <div class="logo-text">SailTrack</div>
+      <div class="logo-sub">GPS Logger</div>
+    </div>
   </div>
   <div class="hdr-stats">
-    <div class="hdr-stat"><div class="v" id="hdr-spd">0.0</div><div class="l">kn</div></div>
-    <div class="hdr-stat"><div class="v" id="hdr-dist">0.00</div><div class="l">nm</div></div>
-    <div class="hdr-stat"><div class="v" id="hdr-time">00:00</div><div class="l">time</div></div>
+    <div class="hstat"><div class="v" id="h-spd">0.0</div><div class="l">kn</div></div>
+    <div class="hstat"><div class="v" id="h-dst">0.00</div><div class="l">nm</div></div>
+    <div class="hstat"><div class="v" id="h-time">00:00</div><div class="l">tijd</div></div>
   </div>
 </header>
 
 <div class="tabs">
-  <div class="tab active" id="tab-map"      onclick="showTab('map')">⚓ MAP</div>
-  <div class="tab"        id="tab-sail"     onclick="showTab('sail')">🧭 SAIL</div>
-  <div class="tab"        id="tab-wp"       onclick="showTab('wp')">📍 WP</div>
-  <div class="tab"        id="tab-trips"    onclick="showTab('trips')">📋 TRIPS</div>
-  <div class="tab"        id="tab-settings" onclick="showTab('settings')">⚙️</div>
+  <div class="tab active" id="tab-map" onclick="switchTab('map')">⚓ KAART</div>
+  <div class="tab" id="tab-sail" onclick="switchTab('sail')">⚡ ZEILEN</div>
+  <div class="tab" id="tab-trips" onclick="switchTab('trips')">📋 TOCHTEN</div>
 </div>
 
-<!-- MAP VIEW -->
-<div class="view active" id="view-map">
-  <div id="map-wrap">
-    <div id="map"></div>
+<div id="map-view">
+  <div id="map">
 
-    <!-- wind -->
-    <div class="map-overlay wind-box">
+    <div class="map-overlay wind-overlay">
       <div class="wind-title">Wind</div>
       <div class="wind-row">
         <span class="wind-arrow" id="wind-arrow">↑</span>
-        <div class="wind-vals">
-          <div class="ws" id="wind-spd">—</div>
-          <div class="wu">knots</div>
-          <div class="wd" id="wind-dir">—</div>
+        <div>
+          <div class="wind-speed-v" id="wind-spd">—</div>
+          <div class="wind-unit">knopen</div>
+          <div class="wind-dir-t" id="wind-dir">—</div>
         </div>
       </div>
+      <div class="wind-offline" id="wind-offline-txt"></div>
     </div>
 
-    <!-- heading -->
-    <div class="map-overlay hdg-box">
-      <div class="hdg-lbl">Heading</div>
+    <div class="map-overlay hdg-overlay">
+      <div class="hdg-title">Koers</div>
       <div class="hdg-val" id="hdg-val">—°</div>
     </div>
 
-    <!-- speed legend -->
-    <div class="map-overlay legend-box">
-      <div class="legend-lbl">Speed (kn)</div>
+    <div class="map-overlay legend-overlay">
+      <div class="legend-title">Snelheid (kn)</div>
       <div class="legend-bar"></div>
-      <div class="legend-nums"><span>0</span><span id="legend-mid">5</span><span id="legend-max">10+</span></div>
+      <div class="legend-labels"><span>0</span><span id="legend-mid">—</span><span id="legend-max">—</span></div>
     </div>
 
-    <!-- gps status -->
-    <div class="map-overlay gps-box">
+    <div class="map-overlay gps-overlay">
       <div class="gps-dot" id="gps-dot"></div>
-      <span id="gps-txt">NO GPS</span>
+      <span id="gps-txt">GEEN GPS</span>
     </div>
 
-    <!-- wp status bar -->
-    <div class="map-overlay wp-status" id="wp-status">
-      <div class="wp-stat"><div class="sv" id="map-wp-brg">—°</div><div class="sl">To WP</div></div>
-      <div class="wp-div"></div>
-      <div class="wp-stat"><div class="sv" id="map-wp-dist">—</div><div class="sl">nm</div></div>
-      <div class="wp-div"></div>
-      <div class="wp-stat"><div class="sv" id="map-wp-name">—</div><div class="sl">waypoint</div></div>
+    <div class="map-overlay screenoff-overlay" id="screenoff-msg">
+      📵 Scherm uit — GPS loopt door
     </div>
 
-    <!-- pick mode banner -->
-    <div class="pick-banner" id="pick-banner">📍 Tap map to place waypoint</div>
   </div>
 
-  <div class="ctrl-bar">
-    <button class="btn-icon" onclick="centerOnPos()" title="Center">⊕</button>
+  <div class="control-bar">
+    <button class="btn-icon" id="btn-center" onclick="centerMap()" title="Centreer">⊕</button>
     <button class="btn-track start" id="btn-track" onclick="toggleTracking()">
-      <span id="track-lbl">▶ START SAILING</span>
+      <span id="track-lbl">▶ START</span>
     </button>
-    <button class="btn-icon" id="btn-chart" onclick="toggleChart()" title="Nautical chart">🗺️</button>
+    <button class="btn-icon" id="btn-screenoff" onclick="toggleScreenOff()" title="Scherm uit">📵</button>
+    <button class="btn-icon" id="btn-chart" onclick="toggleChart()" title="Zeekaart">🗺️</button>
   </div>
 </div>
 
-<!-- SAIL VIEW -->
-<div class="view" id="view-sail" style="background:var(--navy);padding:10px;gap:8px">
-  <div class="sail-grid">
-    <div class="hud accent">
-      <div class="hud-lbl">Course (COG)</div>
-      <div class="hud-val xl" id="s-cog">—°</div>
-      <div class="hud-unit">degrees true</div>
-    </div>
-    <div class="hud gold" id="s-wp-block">
-      <div class="wp-badge" id="s-wp-name">WP —</div>
-      <div class="hud-lbl">Course to Waypoint</div>
-      <div class="hud-val lg gold" id="s-ctw">—°</div>
-      <div class="hud-sub" id="s-wp-dist">— nm</div>
-    </div>
-    <div class="hud">
-      <div class="hud-lbl">VMG to Waypoint</div>
-      <div class="hud-val lg green" id="s-vmg">—</div>
-      <div class="hud-unit">knots</div>
-      <div class="vmg-wrap"><div class="vmg-fill" id="vmg-fill" style="width:0%"></div></div>
-    </div>
-    <div class="hud">
-      <div class="hud-lbl">Speed</div>
-      <div class="hud-val md" id="s-spd">0.0</div>
-      <div class="hud-unit">knots</div>
-    </div>
-    <div class="hud">
-      <div class="hud-lbl">VMG Wind</div>
-      <div class="hud-val md" id="s-vmgw">—</div>
-      <div class="hud-unit" id="s-vmgw-unit">knots</div>
-      <div class="hud-sub" id="s-vmgw-dir">no wind data</div>
-    </div>
+<div id="trips-view">
+  <div class="trips-header">
+    <div class="trips-title">Tochtenlog</div>
   </div>
-  <div class="sail-ctrl">
-    <button class="btn-track start" id="btn-track-sail" onclick="toggleTracking()" style="width:100%;padding:13px">
-      <span id="track-lbl-sail">▶ START SAILING</span>
-    </button>
-  </div>
-</div>
-
-<!-- WAYPOINTS VIEW -->
-<div class="view" id="view-wp">
-  <div class="wp-toolbar">
-    <button class="btn-sm accent" onclick="startPick()">+ TAP MAP</button>
-    <button class="btn-sm"        onclick="openWpForm()">+ LAT/LON</button>
-    <button class="btn-sm" id="btn-wp-chart" onclick="toggleWpChart()">🗺️ CHART</button>
-    <button class="btn-sm danger" onclick="clearWaypoints()">CLEAR</button>
-  </div>
-  <div id="wp-map" style="flex:1;min-height:0"></div>
-  <div class="wp-panel">
-    <div class="wp-list-hdr">
-      <span>Route</span><span id="wp-count" style="color:var(--accent);font-family:var(--fm)">0</span>
-    </div>
-    <div id="wp-list"></div>
-  </div>
-  <div class="wp-form" id="wp-form">
-    <div class="wp-field"><label>Name</label><input type="text" id="wf-name" placeholder="Mark 1" maxlength="20"></div>
-    <div class="wp-field"><label>Latitude</label><input type="number" id="wf-lat" placeholder="52.3702" step="0.0001"></div>
-    <div class="wp-field"><label>Longitude</label><input type="number" id="wf-lng" placeholder="4.8952" step="0.0001"></div>
-    <button class="btn-sm accent" onclick="addWpFromForm()">ADD</button>
-    <button class="btn-sm"        onclick="closeWpForm()">✕</button>
-  </div>
-</div>
-
-<!-- TRIPS VIEW -->
-<div class="view" id="view-trips" style="overflow-y:auto;padding:12px">
   <div id="trips-list"></div>
 </div>
 
-<!-- SETTINGS VIEW -->
-<div class="view" id="view-settings" style="overflow-y:auto;padding:12px">
-  <div class="s-section">
-    <div class="s-title">Display</div>
-    <div class="s-row">
-      <div class="s-lbl"><div class="s-name">Keep Screen On</div><div class="s-desc">Prevent screen sleeping while sailing</div></div>
-      <button class="btn-sm" id="btn-wake" onclick="toggleWake()">OFF</button>
-    </div>
-  </div>
-  <div class="s-section">
-    <div class="s-title">Waypoint Navigation</div>
-    <div class="s-row">
-      <div class="s-lbl"><div class="s-name">Arrival Radius</div><div class="s-desc">Auto-advance to next WP within this distance</div></div>
-      <input type="number" id="s-radius" min="5" max="500" value="20" oninput="saveSetting('radius',this.value)">
-      <span style="font-size:11px;color:var(--muted)">m</span>
-    </div>
-    <div class="s-row">
-      <div class="s-lbl"><div class="s-name">Race Mode</div><div class="s-desc">Loop back to WP 1 after last waypoint</div></div>
-      <span style="font-family:var(--fm);font-size:12px;color:var(--success)">ON</span>
-    </div>
-  </div>
-  <div class="s-section">
-    <div class="s-title">GPS</div>
-    <div class="s-row">
-      <div class="s-lbl"><div class="s-name">Min Point Distance</div><div class="s-desc">Record track point every N metres</div></div>
-      <input type="number" id="s-mindist" min="5" max="200" value="10" oninput="saveSetting('minDist',this.value)">
-      <span style="font-size:11px;color:var(--muted)">m</span>
-    </div>
-  </div>
-  <div class="s-section">
-    <div class="s-title">Chart Apps</div>
-    <div class="s-row">
-      <div class="s-lbl"><div class="s-name">Nautical Chart (map)</div><div class="s-desc">Toggle OpenSeaMap overlay on main map</div></div>
-      <button class="btn-sm accent" onclick="toggleChart()">TOGGLE</button>
-    </div>
-    <div class="s-row">
-      <div class="s-lbl"><div class="s-name">Open in Navionics</div><div class="s-desc">Open current position in Navionics app</div></div>
-      <button class="btn-sm accent" onclick="openNavionics()">OPEN</button>
-    </div>
-  </div>
-  <div class="s-section">
-    <div class="s-title">Data</div>
-    <div class="s-row">
-      <div class="s-lbl"><div class="s-name">Export All Trips</div><div class="s-desc">Download as GPX</div></div>
-      <button class="btn-sm accent" onclick="exportAll()">EXPORT GPX</button>
-    </div>
-    <div class="s-row">
-      <div class="s-lbl"><div class="s-name">Clear All Data</div><div class="s-desc">Delete all saved trips</div></div>
-      <button class="btn-sm danger" onclick="clearAllData()">DELETE ALL</button>
-    </div>
-  </div>
-</div>
+<!-- ── INSTRUMENT VIEW ── -->
+<div id="sail-view">
+  <div class="instruments">
 
-<!-- Modal for naming a tapped waypoint -->
-<div class="modal-bg" id="modal-bg">
-  <div class="modal">
-    <div class="modal-title">Add Waypoint</div>
-    <div class="modal-field"><label>Name</label><input type="text" id="m-name" placeholder="Mark 1" maxlength="20"></div>
-    <div class="modal-field"><label>Coordinates</label><input type="text" id="m-coords" readonly style="color:var(--muted)"></div>
-    <div class="modal-acts">
-      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
-      <button class="modal-ok"     onclick="confirmModal()">Add</button>
+    <div class="instr-cell cog" id="cell-cog">
+      <div class="instr-label">COG</div>
+      <div class="instr-value" id="inst-cog">—</div>
+      <div class="instr-unit">graden</div>
     </div>
+
+    <div class="instr-cell spd" id="cell-spd">
+      <div class="instr-label">Snelheid</div>
+      <div class="instr-value" id="inst-spd">0.0</div>
+      <div class="instr-unit">knopen</div>
+    </div>
+
+    <div class="instr-cell vmg" id="cell-vmg">
+      <div class="instr-label">VMG</div>
+      <div class="instr-value" id="inst-vmg">—</div>
+      <div class="instr-unit" id="inst-vmg-unit">knopen</div>
+    </div>
+
+  </div>
+
+  <div class="sail-bar">
+    <button class="btn-track start" id="btn-track-sail" onclick="toggleTracking()">
+      <span id="track-lbl-sail">▶ START</span>
+    </button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ── STATE ────────────────────────────────────────────────────
-let map, wpMap;
-let posMarker = null, accCircle = null;
-let isTracking = false, watchId = null;
-let currentPos = null, currentSpeed = 0, currentHeading = null, maxSpeed = 0;
-let trackStart = null, totalDist = 0, lastPt = null;
+// ═══════════════════════════════════════════════
+//  SERVICE WORKER REGISTRATION
+// ═══════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('SW registered'))
+    .catch(e => console.warn('SW failed:', e));
+}
+
+// ═══════════════════════════════════════════════
+//  OFFLINE DETECTION
+// ═══════════════════════════════════════════════
+function updateOnlineStatus() {
+  const banner = document.getElementById('offline-banner');
+  if (!navigator.onLine) {
+    banner.classList.add('show');
+    document.getElementById('wind-offline-txt').textContent = 'Geen bereik';
+  } else {
+    banner.classList.remove('show');
+    document.getElementById('wind-offline-txt').textContent = '';
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let map, posMarker, accCircle;
+let isTracking = false;
+let watchId = null;
 let currentTrip = null;
-let trackLines = [];
+let activePolylines = [];
 let windCache = null;
-let elTimer = null;
-let waypoints = [];
-let activeWpIdx = 0;
-let wpMarkersMain = [], wpMarkersWp = [];
-let wpPosMarker = null;
-let wpRouteMain = null, wpRouteWp = null;
-let wpBearingLine = null;
-let pickMode = false, pendingLatLng = null;
-let nauticalMode = false, wpNauticalMode = false;
-let baseLayer, nautBase, nautLayer, wpBaseLayer, wpNautBase, wpNautLayer;
-
-let cfg = { radius: 20, minDist: 10 };
+let elapsedTimer = null;
+let trackStart = null;
+let totalDist = 0;
+let lastPt = null;
+let screenOffMode = false;
 let wakeLock = null;
+let noSleepVideo = null;   // fallback for browsers without Wake Lock API
 
-// ── SETTINGS ─────────────────────────────────────────────────
-function loadCfg() {
-  try { cfg = { ...cfg, ...JSON.parse(localStorage.getItem('st_cfg') || '{}') }; } catch {}
-  document.getElementById('s-radius').value  = cfg.radius;
-  document.getElementById('s-mindist').value = cfg.minDist;
-}
-function saveSetting(k, v) {
-  cfg[k] = parseFloat(v) || cfg[k];
-  localStorage.setItem('st_cfg', JSON.stringify(cfg));
-}
+// ═══════════════════════════════════════════════
+//  MAP INIT
+// ═══════════════════════════════════════════════
+let baseLayerDark, baseLayerLight, seaLayer;
+let chartMode = false;
 
-// ── TABS ─────────────────────────────────────────────────────
-function showTab(name) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  document.getElementById('view-' + name).classList.add('active');
-  if (name === 'wp')  { initWpMap(); setTimeout(() => { if(wpMap) { wpMap.invalidateSize(); updateWpPos(); } }, 100); }
-  if (name === 'map') { setTimeout(() => { if(map) map.invalidateSize(); }, 50); }
-  if (name === 'trips') { renderTrips(); }
-}
-
-// ── MAP INIT ─────────────────────────────────────────────────
 function initMap() {
-  map = L.map('map', { center:[52.5,4.5], zoom:13, zoomControl:false, attributionControl:false });
-  baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom:19 });
-  nautBase  = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 });
-  nautLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { maxZoom:18 });
-  baseLayer.addTo(map);
-  map.on('click', onMapClick);
+  map = L.map('map', {
+    center: [52.5, 5.0],
+    zoom: 13,
+    zoomControl: false,
+    attributionControl: true
+  });
+
+  // Dark base (night mode)
+  baseLayerDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    subdomains: 'abcd',
+    attribution: '© OpenStreetMap © CartoDB'
+  });
+
+  // Light base for chart mode (OSM standard — best base for nautical overlay)
+  baseLayerLight = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  });
+
+  // OpenSeaMap nautical overlay — buoys, beacons, depth contours, shipping lanes
+  seaLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    opacity: 1.0,
+    attribution: '© OpenSeaMap contributors'
+  });
+
+  baseLayerDark.addTo(map);
 }
 
-function initWpMap() {
-  if (wpMap) return;
-  wpMap = L.map('wp-map', { center:[52.5,4.5], zoom:10, zoomControl:true, attributionControl:false });
-  wpBaseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom:19 });
-  wpNautBase  = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 });
-  wpNautLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { maxZoom:18 });
-  wpBaseLayer.addTo(wpMap);
-  wpMap.on('click', onWpMapClick);
-  renderWpMapMarkers();
-  updateWpPos();
-}
-
-function updateWpPos() {
-  if (!wpMap || !currentPos) return;
-  const ll = L.latLng(currentPos.lat, currentPos.lng);
-  if (!wpPosMarker) {
-    const icon = L.divIcon({
-      className: 'pos-icon',
-      html: '<div style="width:16px;height:16px;background:#00c9ff;border:3px solid white;border-radius:50%;box-shadow:0 0 14px #00c9ff;margin-left:-8px;margin-top:-8px"></div>',
-      iconSize:[0,0], iconAnchor:[0,0]
-    });
-    wpPosMarker = L.marker(ll, { icon, zIndexOffset:2000 }).addTo(wpMap);
-    // Centre on position if no waypoints define the view
-    if (!waypoints.length) wpMap.setView(ll, 14);
-  } else {
-    wpPosMarker.setLatLng(ll);
-  }
-}
-
-// ── CHART TOGGLE ─────────────────────────────────────────────
 function toggleChart() {
+  chartMode = !chartMode;
   const btn = document.getElementById('btn-chart');
-  nauticalMode = !nauticalMode;
-  if (nauticalMode) {
-    map.removeLayer(baseLayer);
-    nautBase.addTo(map); nautLayer.addTo(map);
-    btn.classList.add('gold');
-    toast('Nautical chart ON');
+
+  if (chartMode) {
+    map.removeLayer(baseLayerDark);
+    baseLayerLight.addTo(map);
+    seaLayer.addTo(map);
+    document.body.classList.add('chart-mode');
+    btn.classList.add('chart-active');
+    btn.title = 'Nachtmodus';
+    toast('Zeekaart ingeschakeld');
   } else {
-    map.removeLayer(nautBase); map.removeLayer(nautLayer);
-    baseLayer.addTo(map);
-    btn.classList.remove('gold');
-    toast('Dark map ON');
+    map.removeLayer(seaLayer);
+    map.removeLayer(baseLayerLight);
+    baseLayerDark.addTo(map);
+    document.body.classList.remove('chart-mode');
+    btn.classList.remove('chart-active');
+    btn.title = 'Zeekaart';
+    toast('Nachtmodus ingeschakeld');
   }
 }
 
-function toggleWpChart() {
-  const btn = document.getElementById('btn-wp-chart');
-  wpNauticalMode = !wpNauticalMode;
-  if (wpNauticalMode) {
-    wpMap.removeLayer(wpBaseLayer);
-    wpNautBase.addTo(wpMap); wpNautLayer.addTo(wpMap);
-    btn.classList.add('gold');
-    toast('Nautical chart ON — tap to place WP');
+// ═══════════════════════════════════════════════
+//  SPEED → COLOR  (0=green, maxKn=red, relative)
+// ═══════════════════════════════════════════════
+let liveMaxSpeed = 1;   // grows during active trip; reset on new trip
+
+function speedColor(kn, maxKn) {
+  const top = Math.max(maxKn || liveMaxSpeed, 1);
+  const t = Math.min(kn / top, 1);
+  let r, g, b;
+  if (t < 0.5) {
+    const s = t * 2;
+    r = Math.round(s * 255); g = 255; b = Math.round(136 * (1 - s));
   } else {
-    wpMap.removeLayer(wpNautBase); wpMap.removeLayer(wpNautLayer);
-    wpBaseLayer.addTo(wpMap);
-    btn.classList.remove('gold');
-    toast('Dark map ON');
+    const s = (t - 0.5) * 2;
+    r = 255; g = Math.round(255 * (1 - s) + 68 * s); b = 0;
+  }
+  return `rgb(${r},${g},${b})`;
+}
+
+function updateLegend(maxKn) {
+  const mid = (maxKn / 2).toFixed(1);
+  const top = maxKn.toFixed(1);
+  document.getElementById('legend-mid').textContent = mid;
+  document.getElementById('legend-max').textContent = top;
+}
+
+function drawSeg(p1, p2, kn) {
+  // Update live max and recolor all segments when a new max is reached
+  if (kn > liveMaxSpeed) {
+    liveMaxSpeed = kn;
+    updateLegend(liveMaxSpeed);
+    recolorLiveRoute();
+  }
+  L.polyline([[p1.lat, p1.lng], [p2.lat, p2.lng]], {
+    color: speedColor(kn), weight: 4, opacity: 0.92, lineCap: 'round',
+    _spd: kn   // store speed for recoloring
+  }).addTo(map);
+}
+
+function recolorLiveRoute() {
+  map.eachLayer(l => {
+    if (l instanceof L.Polyline && l.options._spd !== undefined) {
+      l.setStyle({ color: speedColor(l.options._spd) });
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  HAVERSINE (nautical miles)
+// ═══════════════════════════════════════════════
+function distNm(a, b) {
+  const R = 3440.065;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lng - a.lng) * Math.PI / 180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+// ═══════════════════════════════════════════════
+//  DOUGLAS-PEUCKER  (reduce stored points)
+// ═══════════════════════════════════════════════
+function perpendicularDist(pt, l1, l2) {
+  const A = pt.lat - l1.lat, B = pt.lng - l1.lng;
+  const C = l2.lat - l1.lat, D = l2.lng - l1.lng;
+  const dot = A*C + B*D, lenSq = C*C + D*D;
+  const t = lenSq !== 0 ? dot / lenSq : -1;
+  const near = t < 0 ? l1 : t > 1 ? l2 : { lat: l1.lat + t*C, lng: l1.lng + t*D };
+  return Math.sqrt((pt.lat-near.lat)**2 + (pt.lng-near.lng)**2);
+}
+
+function rdp(pts, eps) {
+  if (pts.length < 3) return pts;
+  let maxD = 0, idx = 0;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = perpendicularDist(pts[i], pts[0], pts[pts.length-1]);
+    if (d > maxD) { maxD = d; idx = i; }
+  }
+  if (maxD > eps) {
+    return [...rdp(pts.slice(0, idx+1), eps).slice(0,-1), ...rdp(pts.slice(idx), eps)];
+  }
+  return [pts[0], pts[pts.length-1]];
+}
+
+// ═══════════════════════════════════════════════
+//  WIND — Open-Meteo (free, no key)
+// ═══════════════════════════════════════════════
+async function fetchWind(lat, lng) {
+  if (!navigator.onLine) {
+    document.getElementById('wind-offline-txt').textContent = 'Geen bereik';
+    return null;
+  }
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&timezone=auto&forecast_days=1`;
+    const r = await fetch(url);
+    const d = await r.json();
+    if (d.current) {
+      windCache = { speed: d.current.wind_speed_10m, dir: d.current.wind_direction_10m, ts: Date.now() };
+      updateWindUI(windCache.speed, windCache.dir);
+      document.getElementById('wind-offline-txt').textContent = '';
+      return windCache;
+    }
+  } catch(e) {
+    document.getElementById('wind-offline-txt').textContent = 'Geen bereik';
+  }
+  return null;
+}
+
+const COMPASS = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
+function deg2cmp(d) { return COMPASS[Math.round(d / 22.5) % 16]; }
+
+function updateWindUI(spd, dir) {
+  document.getElementById('wind-spd').textContent = spd.toFixed(1);
+  document.getElementById('wind-dir').textContent = `${deg2cmp(dir)} ${Math.round(dir)}°`;
+  document.getElementById('wind-arrow').style.transform = `rotate(${dir}deg)`;
+}
+
+// ═══════════════════════════════════════════════
+//  GPS
+// ═══════════════════════════════════════════════
+function startGPS() {
+  if (!navigator.geolocation) { toast('GPS niet beschikbaar'); return; }
+  watchId = navigator.geolocation.watchPosition(onPos, onGPSErr, {
+    enableHighAccuracy: true,
+    maximumAge: 3000,
+    timeout: 15000
+  });
+  setGpsDot('active', 'ZOEKEN…');
+}
+
+function stopGPS() {
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  setGpsDot('', 'GEEN GPS');
+}
+
+function setGpsDot(cls, txt) {
+  document.getElementById('gps-dot').className = 'gps-dot' + (cls ? ' ' + cls : '');
+  document.getElementById('gps-txt').textContent = txt;
+}
+
+// VMG = boat speed × cos(True Wind Angle)
+// Positive = toward wind (upwind), negative = away (downwind)
+function calcVMG(speedKn, cogDeg) {
+  if (!windCache || cogDeg == null) return null;
+  const twa = ((cogDeg - windCache.dir) + 360) % 360;
+  // Normalise to 0-180
+  const angle = twa > 180 ? 360 - twa : twa;
+  const vmg = speedKn * Math.cos(angle * Math.PI / 180);
+  return { vmg: Math.abs(vmg), upwind: angle < 90 };
+}
+
+function updateInstruments(kn, cogDeg) {
+  // COG
+  const cogEl = document.getElementById('inst-cog');
+  cogEl.textContent = cogDeg != null ? Math.round(cogDeg) + '°' : '—';
+
+  // Speed
+  document.getElementById('inst-spd').textContent = kn.toFixed(1);
+
+  // VMG
+  const vmgEl = document.getElementById('inst-vmg');
+  const vmgUnit = document.getElementById('inst-vmg-unit');
+  const cell = document.getElementById('cell-vmg');
+  const result = calcVMG(kn, cogDeg);
+  if (result) {
+    vmgEl.textContent = result.vmg.toFixed(1);
+    vmgUnit.textContent = result.upwind ? 'kn ▲ loef' : 'kn ▼ lij';
+    cell.className = 'instr-cell vmg' + (result.upwind ? '' : ' negative');
+  } else {
+    vmgEl.textContent = '—';
+    vmgUnit.textContent = windCache ? 'knopen' : 'geen wind';
   }
 }
 
-// ── POSITION MARKER ───────────────────────────────────────────
+function onPos(pos) {
+  const { latitude: lat, longitude: lng, speed, accuracy, heading: hdg } = pos.coords;
+  const kn = speed != null ? speed * 1.94384 : 0;
+
+  setGpsDot(isTracking ? 'tracking' : 'active', `±${Math.round(accuracy)}m`);
+
+  if (hdg != null) document.getElementById('hdg-val').textContent = Math.round(hdg) + '°';
+  document.getElementById('h-spd').textContent = kn.toFixed(1);
+
+  // Update instrument panel
+  updateInstruments(kn, hdg);
+
+  // Position marker
+  updatePosMarker(lat, lng, accuracy);
+
+  if (isTracking) {
+    const pt = { lat, lng, spd: kn, ts: Date.now() };
+    if (lastPt) {
+      const d = distNm(lastPt, pt);
+      if (d > 0.003) {   // ~5.5m threshold
+        totalDist += d;
+        drawSeg(lastPt, pt, kn);
+        document.getElementById('h-dst').textContent = totalDist.toFixed(2);
+        currentTrip.points.push(pt);
+        lastPt = pt;
+      }
+    } else {
+      currentTrip.points.push(pt);
+      lastPt = pt;
+    }
+    // Wind: fetch on start + every 5 min
+    if (!windCache || (Date.now() - windCache.ts) > 300000) {
+      fetchWind(lat, lng).then(w => {
+        if (w && currentTrip) currentTrip.windSamples.push({ ...w, lat, lng });
+      });
+    }
+  }
+}
+
+function onGPSErr(e) {
+  console.warn('GPS err', e);
+  setGpsDot('', 'GPS FOUT');
+  toast('GPS fout — check locatierechten');
+}
+
+// ═══════════════════════════════════════════════
+//  POSITION MARKER
+// ═══════════════════════════════════════════════
 function updatePosMarker(lat, lng, acc) {
-  const ll = L.latLng(lat, lng);
+  const ll = [lat, lng];
   if (!posMarker) {
     const icon = L.divIcon({
-      className: 'pos-icon',
-      html: '<div style="width:16px;height:16px;background:#00c9ff;border:3px solid white;border-radius:50%;box-shadow:0 0 14px #00c9ff;margin-left:-8px;margin-top:-8px"></div>',
-      iconSize: [0,0], iconAnchor: [0,0]
+      className: '',
+      html: `<div style="width:14px;height:14px;background:#00c9ff;border:3px solid white;border-radius:50%;box-shadow:0 0 10px #00c9ff88"></div>`,
+      iconSize: [14,14], iconAnchor: [7,7]
     });
-    posMarker = L.marker(ll, { icon, zIndexOffset:2000 }).addTo(map);
+    posMarker = L.marker(ll, { icon, zIndexOffset: 1000 }).addTo(map);
     map.setView(ll, 15);
   } else {
     posMarker.setLatLng(ll);
   }
-  if (!accCircle) {
-    accCircle = L.circle(ll, { radius:acc, color:'#00c9ff', fillColor:'#00c9ff', fillOpacity:.06, weight:1, opacity:.3 }).addTo(map);
-  } else {
-    accCircle.setLatLng(ll).setRadius(acc);
+  if (accCircle) accCircle.setLatLng(ll).setRadius(acc);
+  else accCircle = L.circle(ll, { radius: acc, color:'#00c9ff', fillColor:'#00c9ff', fillOpacity:0.06, weight:1, opacity:0.25 }).addTo(map);
+}
+
+// ═══════════════════════════════════════════════
+//  SCREEN-OFF MODE
+// ═══════════════════════════════════════════════
+async function acquireWakeLock() {
+  // Try Wake Lock API first (Chrome 84+, Android Chrome)
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+      return true;
+    } catch(e) { console.warn('WakeLock failed:', e); }
   }
+  return false;
 }
 
-function centerOnPos() {
-  if (currentPos) map.setView([currentPos.lat, currentPos.lng], 15);
-  else toast('No GPS position yet');
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
 }
 
-// ── GPS ───────────────────────────────────────────────────────
-function startGPS() {
-  if (!navigator.geolocation) { toast('GPS not available'); return; }
-  watchId = navigator.geolocation.watchPosition(onPos, onGpsErr, { enableHighAccuracy:true, maximumAge:2000, timeout:15000 });
-}
-
-function onPos(p) {
-  const { latitude:lat, longitude:lng, speed, accuracy, heading:hdg } = p.coords;
-  const spd = speed ? speed * 1.94384 : 0;
-  currentPos = { lat, lng };
-  currentSpeed = spd;
-  if (spd > maxSpeed) { maxSpeed = spd; updateLegend(); }
-  if (hdg !== null && hdg !== undefined) {
-    currentHeading = hdg;
-    document.getElementById('hdg-val').textContent = Math.round(hdg) + '°';
+// Re-acquire wake lock whenever the page becomes visible again
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && !wakeLock) {
+    await acquireWakeLock();
   }
+});
 
-  // GPS dot
-  const dot = document.getElementById('gps-dot');
-  dot.className = 'gps-dot ' + (isTracking ? 'tracking' : 'ready');
-  document.getElementById('gps-txt').textContent = '±' + Math.round(accuracy) + 'm';
+async function toggleScreenOff() {
+  screenOffMode = !screenOffMode;
+  const btn = document.getElementById('btn-screenoff');
+  const msg = document.getElementById('screenoff-msg');
 
-  // Header speed
-  document.getElementById('hdr-spd').textContent = spd.toFixed(1);
-
-  // Position marker
-  try { updatePosMarker(lat, lng, accuracy); } catch(e) { console.error('Marker error:', e); }
-
-  // Sail HUD
-  try { updateSailHud(); } catch(e) {}
-
-  // Wind (on first fix, then every 10min)
-  if (!windCache || Date.now() - windCache.ts > 600000) fetchWind(lat, lng);
-
-  // Update position on wp map if open
-  updateWpPos();
-
-  // Waypoint proximity check
-  checkWpProximity();
-
-  // Track recording
-  if (isTracking && currentTrip) {
-    const pt = { lat, lng, spd, ts: Date.now() };
-    if (!lastPt) {
-      currentTrip.points.push(pt);
-      lastPt = pt;
+  if (screenOffMode) {
+    const got = await acquireWakeLock();
+    btn.classList.add('screen-off-active');
+    msg.classList.add('visible');
+    if (got) {
+      toast('Scherm mag nu uit — GPS loopt door');
     } else {
-      const dm = distM(lastPt, pt);
-      if (dm >= cfg.minDist) {
-        totalDist += distNm(lastPt, pt);
-        drawSeg(lastPt, pt, spd);
-        document.getElementById('hdr-dist').textContent = totalDist.toFixed(2);
-        currentTrip.points.push(pt);
-        lastPt = pt;
-      }
+      toast('Wake lock niet gelukt — probeer scherm handmatig te dimmen');
     }
-    // Store wind sample while tracking
-    if (windCache && (!currentTrip.windSamples.length ||
-        Date.now() - currentTrip.windSamples[currentTrip.windSamples.length-1].ts > 300000)) {
-      currentTrip.windSamples.push({ ...windCache, ts: Date.now() });
-    }
+  } else {
+    releaseWakeLock();
+    btn.classList.remove('screen-off-active');
+    msg.classList.remove('visible');
+    toast('Scherm-uit modus uitgeschakeld');
   }
 }
 
-function onGpsErr(e) {
-  document.getElementById('gps-txt').textContent = 'GPS ERR';
-  toast('GPS: ' + e.message);
-}
-
-// ── TRACKING ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════
+//  TRACKING
+// ═══════════════════════════════════════════════
 function toggleTracking() {
   isTracking ? stopTracking() : startTracking();
 }
@@ -633,464 +939,218 @@ function toggleTracking() {
 function startTracking() {
   isTracking = true;
   trackStart = Date.now();
-  totalDist = 0; lastPt = null; maxSpeed = 0;
-  updateLegend();
-  currentTrip = { points:[], startTime:trackStart, windSamples:[] };
-  // Clear old track lines
-  trackLines.forEach(l => map.removeLayer(l));
-  trackLines = [];
-  setTrackBtns(true);
-  elTimer = setInterval(tickTimer, 1000);
-  toast('Tracking started');
+  totalDist = 0;
+  lastPt = null;
+  currentTrip = { points: [], startTime: trackStart, windSamples: [] };
+  liveMaxSpeed = 1;
+  updateLegend(1);
+
+  // Clear old lines
+  map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+
+  syncTrackButtons();
+  elapsedTimer = setInterval(tickElapsed, 1000);
+
+  if (!watchId) startGPS();
+  else setGpsDot('tracking', document.getElementById('gps-txt').textContent);
+
+  // Fetch wind immediately
+  if (posMarker) {
+    const p = posMarker.getLatLng();
+    fetchWind(p.lat, p.lng).then(w => { if (w && currentTrip) currentTrip.windSamples.push({ ...w, lat: p.lat, lng: p.lng }); });
+  }
+  toast('Tracking gestart');
 }
 
 function stopTracking() {
   isTracking = false;
-  clearInterval(elTimer);
-  setTrackBtns(false);
-  if (currentTrip && currentTrip.points.length > 1) { saveTrip(); toast('Trip saved!'); }
-  else toast('Too short — not saved');
+  clearInterval(elapsedTimer);
+
+  syncTrackButtons();
+  setGpsDot('active', document.getElementById('gps-txt').textContent);
+
+  if (currentTrip && currentTrip.points.length > 2) {
+    saveTrip();
+    toast('Tocht opgeslagen ✓');
+  } else {
+    toast('Te kort — niet opgeslagen');
+  }
 }
 
-function setTrackBtns(on) {
-  const stop = '<span class="rec-dot"></span>STOP SAILING';
-  const go   = '▶ START SAILING';
-  ['btn-track','btn-track-sail'].forEach(id => {
-    const b = document.getElementById(id);
-    b.className = 'btn-track ' + (on ? 'stop' : 'start');
-  });
-  document.getElementById('track-lbl').innerHTML      = on ? stop : go;
-  document.getElementById('track-lbl-sail').innerHTML = on ? stop : go;
-}
-
-function tickTimer() {
+function tickElapsed() {
   if (!trackStart) return;
   const s = Math.floor((Date.now() - trackStart) / 1000);
-  const m = Math.floor(s/60), h = Math.floor(m/60);
-  const mm = String(m%60).padStart(2,'0'), ss = String(s%60).padStart(2,'0');
-  document.getElementById('hdr-time').textContent = h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  const m = Math.floor(s / 60), h = Math.floor(m / 60);
+  const mm = String(m % 60).padStart(2,'0'), ss = String(s % 60).padStart(2,'0');
+  document.getElementById('h-time').textContent = h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-// ── TRACK DRAWING ─────────────────────────────────────────────
-function updateLegend() {
-  const max = Math.max(maxSpeed, 1);
-  const mid = document.getElementById('legend-mid');
-  const top = document.getElementById('legend-max');
-  if (mid) mid.textContent = (max/2).toFixed(1);
-  if (top) top.textContent = max.toFixed(1);
+// ═══════════════════════════════════════════════
+//  CENTER MAP
+// ═══════════════════════════════════════════════
+function centerMap() {
+  if (posMarker) map.setView(posMarker.getLatLng(), 15);
 }
 
-function spdColor(kn, scaleMax) {
-  // Auto-scale to the trip's max speed so far (minimum 1kn to avoid divide issues)
-  const max = scaleMax || Math.max(maxSpeed, 1);
-  const t = Math.min(kn/max, 1);
-  let r,g,b;
-  if (t < .5) { const s=t*2; r=Math.round(s*255); g=255; b=Math.round(136*(1-s)); }
-  else         { const s=(t-.5)*2; r=255; g=Math.round(255*(1-s)+68*s); b=0; }
-  return `rgb(${r},${g},${b})`;
-}
-function drawSeg(p1,p2,spd) {
-  const l = L.polyline([[p1.lat,p1.lng],[p2.lat,p2.lng]], { color:spdColor(spd), weight:4, opacity:.92, lineCap:'round' }).addTo(map);
-  trackLines.push(l);
-}
-
-// ── WIND ─────────────────────────────────────────────────────
-async function fetchWind(lat, lng) {
-  try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn&timezone=auto&forecast_days=1`;
-    const resp = await fetch(url);
-    const d = await resp.json();
-    if (d.current) {
-      windCache = { speed: d.current.wind_speed_10m, dir: d.current.wind_direction_10m, ts: Date.now() };
-      showWind(windCache.speed, windCache.dir);
-      updateSailHud();
-    }
-  } catch(e) {
-    console.error('Wind fetch failed:', e);
-    document.getElementById('wind-spd').textContent = 'err';
-  }
-}
-
-function showWind(spd, dir) {
-  document.getElementById('wind-spd').textContent   = spd.toFixed(1);
-  document.getElementById('wind-dir').textContent   = compass(dir) + ' ' + Math.round(dir) + '°';
-  document.getElementById('wind-arrow').style.transform = `rotate(${(dir+180)%360}deg)`;
-}
-
-function compass(d) {
-  return ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(d/22.5)%16];
-}
-
-// ── SAIL HUD ─────────────────────────────────────────────────
-function updateSailHud() {
-  const spd = currentSpeed;
-  document.getElementById('s-spd').textContent = spd.toFixed(1);
-  document.getElementById('s-cog').textContent = currentHeading !== null ? Math.round(currentHeading)+'°' : '—°';
-
-  // Waypoint nav
-  if (waypoints.length && currentPos) {
-    const wp = waypoints[activeWpIdx];
-    const ctw  = bearing(currentPos, wp);
-    const dist = distNm(currentPos, wp);
-    const vmg  = currentHeading !== null ? spd * Math.cos((ctw - currentHeading) * Math.PI/180) : null;
-
-    document.getElementById('s-ctw').textContent      = Math.round(ctw) + '°';
-    document.getElementById('s-wp-dist').textContent  = dist.toFixed(2) + ' nm';
-    document.getElementById('s-wp-name').textContent  = 'WP ' + (activeWpIdx+1);
-    document.getElementById('map-wp-brg').textContent  = Math.round(ctw) + '°';
-    document.getElementById('map-wp-dist').textContent = dist.toFixed(2);
-    document.getElementById('map-wp-name').textContent = wp.name;
-    document.getElementById('wp-status').classList.add('show');
-
-    if (vmg !== null) {
-      document.getElementById('s-vmg').textContent = vmg.toFixed(1);
-      document.getElementById('vmg-fill').style.width = Math.max(0, Math.min(100, (vmg/Math.max(spd,.1))*100)) + '%';
-    }
-
-    // Bearing line on map
-    if (wpBearingLine) { map.removeLayer(wpBearingLine); wpBearingLine = null; }
-    wpBearingLine = L.polyline([[currentPos.lat,currentPos.lng],[wp.lat,wp.lng]], { color:'#00c9ff', weight:2, opacity:.7, dashArray:'10,8' }).addTo(map);
-  } else {
-    document.getElementById('wp-status').classList.remove('show');
-    document.getElementById('s-ctw').textContent = '—°';
-    document.getElementById('s-vmg').textContent = '—';
-    document.getElementById('s-wp-name').textContent = 'WP —';
-  }
-
-  // Wind VMG
-  if (windCache && currentHeading !== null) {
-    const diff = ((windCache.dir - currentHeading) + 360) % 360;
-    const angle = diff > 180 ? diff - 360 : diff;
-    const vmgw = spd * Math.cos(angle * Math.PI/180);
-    const el = document.getElementById('s-vmgw');
-    const eu = document.getElementById('s-vmgw-unit');
-    const ed = document.getElementById('s-vmgw-dir');
-    el.textContent = Math.abs(vmgw).toFixed(1);
-    if (vmgw > 0.2)       { el.style.color='var(--success)'; eu.textContent='kn upwind';   ed.textContent='▲ toward wind'; }
-    else if (vmgw < -0.2) { el.style.color='var(--gold)';    eu.textContent='kn downwind';  ed.textContent='▼ away from wind'; }
-    else                  { el.style.color='var(--muted)';   eu.textContent='knots';        ed.textContent='→ across wind'; }
-  }
-}
-
-// ── WAYPOINTS ─────────────────────────────────────────────────
-function addWp(name, lat, lng) {
-  waypoints.push({ id:Date.now(), name, lat, lng });
-  saveWps(); renderWpList(); renderWpMapMarkers(); renderMainWpMarkers();
-  toast('Added: ' + name);
-}
-function removeWp(i) {
-  waypoints.splice(i,1);
-  if (activeWpIdx >= waypoints.length) activeWpIdx = 0;
-  saveWps(); renderWpList(); renderWpMapMarkers(); renderMainWpMarkers();
-}
-function moveWp(i, dir) {
-  const j = i+dir;
-  if (j<0||j>=waypoints.length) return;
-  [waypoints[i],waypoints[j]]=[waypoints[j],waypoints[i]];
-  saveWps(); renderWpList(); renderWpMapMarkers(); renderMainWpMarkers();
-}
-function clearWaypoints() {
-  if (!waypoints.length) return;
-  waypoints=[]; activeWpIdx=0;
-  saveWps(); renderWpList(); renderWpMapMarkers(); renderMainWpMarkers();
-  document.getElementById('wp-status').classList.remove('show');
-  toast('Waypoints cleared');
-}
-function saveWps() { localStorage.setItem('st_wps', JSON.stringify(waypoints)); }
-function loadWps() { try { waypoints = JSON.parse(localStorage.getItem('st_wps')||'[]'); } catch { waypoints=[]; } }
-
-function checkWpProximity() {
-  if (!waypoints.length || !currentPos) return;
-  const wp = waypoints[activeWpIdx];
-  if (distM(currentPos, wp) <= cfg.radius) {
-    const prev = wp.name;
-    activeWpIdx = (activeWpIdx+1) % waypoints.length;
-    saveWps(); renderWpList(); renderMainWpMarkers();
-    toastWp('✓ ' + prev + ' → ' + waypoints[activeWpIdx].name);
-  }
-}
-
-function wpIcon(i) {
-  const active = i === activeWpIdx;
-  return L.divIcon({
-    className: '',
-    html: `<div style="width:26px;height:26px;background:${active?'var(--accent)':'var(--gold)'};border:2px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.5)"><span style="transform:rotate(45deg);font-size:10px;font-weight:700;color:#0a1628">${i+1}</span></div>`,
-    iconSize:[26,26], iconAnchor:[13,26]
-  });
-}
-
-function renderMainWpMarkers() {
-  wpMarkersMain.forEach(m => map.removeLayer(m));
-  wpMarkersMain = [];
-  if (wpRouteMain) { map.removeLayer(wpRouteMain); wpRouteMain=null; }
-  waypoints.forEach((wp,i) => {
-    const m = L.marker([wp.lat,wp.lng],{icon:wpIcon(i)}).addTo(map).bindTooltip(wp.name,{permanent:false,direction:'top'});
-    wpMarkersMain.push(m);
-  });
-  if (waypoints.length > 1) {
-    const ll = [...waypoints.map(w=>[w.lat,w.lng]), [waypoints[0].lat,waypoints[0].lng]];
-    wpRouteMain = L.polyline(ll,{color:'#f0c040',weight:1.5,opacity:.4,dashArray:'6,6'}).addTo(map);
-  }
-}
-
-function renderWpMapMarkers() {
-  if (!wpMap) return;
-  wpMarkersWp.forEach(m => wpMap.removeLayer(m));
-  wpMarkersWp = [];
-  if (wpRouteWp) { wpMap.removeLayer(wpRouteWp); wpRouteWp=null; }
-  waypoints.forEach((wp,i) => {
-    const icon = L.divIcon({
-      className:'',
-      html:`<div style="width:26px;height:26px;background:var(--gold);border:2px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:10px;font-weight:700;color:#0a1628">${i+1}</span></div>`,
-      iconSize:[26,26],iconAnchor:[13,26]
-    });
-    const m = L.marker([wp.lat,wp.lng],{icon}).addTo(wpMap).bindTooltip(wp.name,{permanent:true,direction:'top',offset:[0,-28]});
-    wpMarkersWp.push(m);
-  });
-  if (waypoints.length > 1) {
-    const ll = [...waypoints.map(w=>[w.lat,w.lng]),[waypoints[0].lat,waypoints[0].lng]];
-    wpRouteWp = L.polyline(ll,{color:'#f0c040',weight:2,opacity:.6,dashArray:'8,6'}).addTo(wpMap);
-    wpMap.fitBounds(wpRouteWp.getBounds(),{padding:[30,30]});
-  }
-}
-
-function renderWpList() {
-  const list = document.getElementById('wp-list');
-  document.getElementById('wp-count').textContent = waypoints.length + ' wp';
-  if (!waypoints.length) { list.innerHTML='<div class="wp-empty">No waypoints. Tap map or enter lat/lon.</div>'; return; }
-  list.innerHTML = waypoints.map((wp,i) => `
-    <div class="wp-item">
-      <div class="wp-num ${i===activeWpIdx?'cur':''}">${i+1}</div>
-      <div class="wp-info"><div class="wp-name">${wp.name}</div><div class="wp-coords">${wp.lat.toFixed(5)}, ${wp.lng.toFixed(5)}</div></div>
-      <div class="wp-acts">
-        <button class="wp-btn" onclick="moveWp(${i},-1)">↑</button>
-        <button class="wp-btn" onclick="moveWp(${i},1)">↓</button>
-        <button class="wp-btn" onclick="removeWp(${i})">🗑️</button>
-      </div>
-    </div>`).join('');
-}
-
-// ── PICK MODE ─────────────────────────────────────────────────
-function startPick() {
-  pickMode = true;
-  document.getElementById('pick-banner').classList.add('show');
-  showTab('map');
-  toast('Tap the map to place a waypoint');
-}
-
-function onMapClick(e) {
-  if (!pickMode) return;
-  pendingLatLng = e.latlng;
-  document.getElementById('m-name').value   = 'Mark ' + (waypoints.length+1);
-  document.getElementById('m-coords').value = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
-  document.getElementById('modal-bg').classList.add('open');
-  pickMode = false;
-  document.getElementById('pick-banner').classList.remove('show');
-}
-
-function onWpMapClick(e) {
-  pendingLatLng = e.latlng;
-  document.getElementById('m-name').value   = 'Mark ' + (waypoints.length+1);
-  document.getElementById('m-coords').value = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
-  document.getElementById('modal-bg').classList.add('open');
-}
-
-function closeModal()   { document.getElementById('modal-bg').classList.remove('open'); pendingLatLng=null; }
-function confirmModal() {
-  if (!pendingLatLng) return;
-  addWp(document.getElementById('m-name').value.trim()||'Mark '+(waypoints.length+1), pendingLatLng.lat, pendingLatLng.lng);
-  closeModal();
-}
-
-function openWpForm()  { document.getElementById('wp-form').classList.add('open'); document.getElementById('wf-name').value='Mark '+(waypoints.length+1); }
-function closeWpForm() { document.getElementById('wp-form').classList.remove('open'); }
-function addWpFromForm() {
-  const name = document.getElementById('wf-name').value.trim()||'Mark '+(waypoints.length+1);
-  const lat  = parseFloat(document.getElementById('wf-lat').value);
-  const lng  = parseFloat(document.getElementById('wf-lng').value);
-  if (isNaN(lat)||isNaN(lng)||lat<-90||lat>90||lng<-180||lng>180) { toast('Invalid coordinates'); return; }
-  addWp(name,lat,lng); closeWpForm();
-}
-
-// ── TRIPS ─────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════
+//  SAVE / LOAD
+// ═══════════════════════════════════════════════
 function saveTrip() {
   const trips = loadTrips();
   const pts = currentTrip.points;
-  const speeds = pts.map(p=>p.spd);
-  const ws = currentTrip.windSamples;
+  const spds = pts.map(p => p.spd);
+  const simplified = rdp(pts, 0.00005); // keep route shape, reduce storage
+
+  let avgWind = null;
+  if (currentTrip.windSamples.length > 0) {
+    const ws = currentTrip.windSamples;
+    avgWind = { speed: ws.reduce((a,w) => a+w.speed,0)/ws.length, dir: ws[ws.length-1].dir };
+  }
+
   trips.unshift({
     id: currentTrip.startTime,
     startTime: currentTrip.startTime,
     duration: Date.now() - currentTrip.startTime,
     distance: totalDist,
-    maxSpeed: Math.max(...speeds),
-    avgSpeed: speeds.reduce((a,b)=>a+b,0)/speeds.length,
-    points: pts,
-    wind: ws.length ? { speed: ws.reduce((a,w)=>a+w.speed,0)/ws.length, dir: ws[ws.length-1].dir } : null,
-    waypoints: waypoints.length ? JSON.parse(JSON.stringify(waypoints)) : null
+    maxSpeed: Math.max(...spds),
+    avgSpeed: spds.reduce((a,b)=>a+b,0)/spds.length,
+    points: simplified,
+    wind: avgWind
   });
-  const all = trips.slice(0,50);
-  localStorage.setItem('st_trips', JSON.stringify(all));
+
+  if (trips.length > 60) trips.pop();
+  try { localStorage.setItem('sailtrack_v2', JSON.stringify(trips)); } catch(e) { toast('Opslag vol!'); }
 }
 
-function loadTrips() { try { return JSON.parse(localStorage.getItem('st_trips')||'[]'); } catch { return []; } }
+function loadTrips() {
+  try { return JSON.parse(localStorage.getItem('sailtrack_v2') || '[]'); } catch { return []; }
+}
 
+function deleteTrip(id, e) {
+  e.stopPropagation();
+  const trips = loadTrips().filter(t => t.id !== id);
+  localStorage.setItem('sailtrack_v2', JSON.stringify(trips));
+  renderTrips();
+  toast('Tocht verwijderd');
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER TRIPS
+// ═══════════════════════════════════════════════
 function renderTrips() {
   const trips = loadTrips();
-  const c = document.getElementById('trips-list');
-  if (!trips.length) { c.innerHTML='<div class="empty-state"><div class="empty-icon">⚓</div>No trips yet. Set sail!</div>'; return; }
-  c.innerHTML = trips.map(t => {
+  const el = document.getElementById('trips-list');
+  if (!trips.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⛵</div><div class="empty-txt">Nog geen tochten.<br>Druk START om te beginnen.</div></div>`;
+    return;
+  }
+  el.innerHTML = trips.map(t => {
     const d = new Date(t.startTime);
-    const ds = d.toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'});
-    const ts = d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
-    const dm = Math.floor(t.duration/60000);
-    const dur = dm>=60 ? `${Math.floor(dm/60)}u ${dm%60}m` : `${dm}m`;
-    const wind = t.wind ? `🌬️ ${t.wind.speed.toFixed(1)} kn ${compass(t.wind.dir)}` : 'Geen winddata';
+    const dateStr = d.toLocaleDateString('nl-NL', { day:'numeric', month:'short', year:'numeric' });
+    const timeStr = d.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' });
+    const dm = Math.floor(t.duration / 60000);
+    const durStr = dm >= 60 ? `${Math.floor(dm/60)}u ${dm%60}m` : `${dm}m`;
+    const windStr = t.wind ? `${t.wind.speed.toFixed(1)} kn uit ${deg2cmp(t.wind.dir)}` : 'Geen winddata';
     return `<div class="trip-card" onclick="viewTrip(${t.id})">
-      <div class="trip-hdr">
-        <div><div class="trip-date">${ds} · ${ts}</div></div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <div class="trip-dur">${dur}</div>
-          <button class="trip-del" onclick="delTrip(${t.id},event)">✕</button>
+      <div class="trip-card-top">
+        <div><div class="trip-date">${dateStr}</div><div class="trip-time">${timeStr}</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="trip-dur">${durStr}</span>
+          <button class="trip-del" onclick="deleteTrip(${t.id},event)">✕</button>
         </div>
       </div>
       <div class="trip-stats">
-        <div class="trip-stat"><div class="v">${t.distance.toFixed(2)}</div><div class="l">nm</div></div>
-        <div class="trip-stat"><div class="v">${t.maxSpeed.toFixed(1)}</div><div class="l">kn max</div></div>
-        <div class="trip-stat"><div class="v">${t.avgSpeed.toFixed(1)}</div><div class="l">kn gem</div></div>
+        <div class="ts"><div class="v">${t.distance.toFixed(2)}</div><div class="l">nm</div></div>
+        <div class="ts"><div class="v">${t.maxSpeed.toFixed(1)}</div><div class="l">max kn</div></div>
+        <div class="ts"><div class="v">${t.avgSpeed.toFixed(1)}</div><div class="l">gem kn</div></div>
       </div>
-      <div class="trip-foot">
-        <span>${wind}</span>
-        <button class="btn-sm" onclick="exportGPX(${t.id},event)" style="font-size:10px;padding:4px 8px">GPX</button>
-      </div>
+      <div class="trip-wind">🌬️ <span>${windStr}</span></div>
     </div>`;
   }).join('');
 }
 
+// ═══════════════════════════════════════════════
+//  VIEW TRIP ON MAP
+// ═══════════════════════════════════════════════
 function viewTrip(id) {
-  const trip = loadTrips().find(t=>t.id===id);
-  if (!trip||trip.points.length<2) return;
-  showTab('map');
-  trackLines.forEach(l=>map.removeLayer(l)); trackLines=[];
-  const bounds=[];
-  const tripMax = Math.max(trip.maxSpeed, 1);
-  for (let i=1;i<trip.points.length;i++) {
-    const p1=trip.points[i-1],p2=trip.points[i];
-    const l = L.polyline([[p1.lat,p1.lng],[p2.lat,p2.lng]],{color:spdColor((p1.spd+p2.spd)/2, tripMax),weight:4,opacity:.9,lineCap:'round'}).addTo(map);
-    trackLines.push(l);
-    bounds.push([p1.lat,p1.lng]);
+  const trip = loadTrips().find(t => t.id === id);
+  if (!trip || trip.points.length < 2) return;
+  switchTab('map');
+  map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+  const tripMax = trip.maxSpeed || 1;
+  updateLegend(tripMax);
+  const bounds = [];
+  for (let i = 1; i < trip.points.length; i++) {
+    const a = trip.points[i-1], b = trip.points[i];
+    L.polyline([[a.lat,a.lng],[b.lat,b.lng]], {
+      color: speedColor((a.spd+b.spd)/2, tripMax), weight: 4, opacity: 0.9, lineCap: 'round'
+    }).addTo(map);
+    bounds.push([a.lat,a.lng]);
   }
-  bounds.push([trip.points[trip.points.length-1].lat,trip.points[trip.points.length-1].lng]);
-  map.fitBounds(bounds,{padding:[40,40]});
-  if (trip.wind) showWind(trip.wind.speed,trip.wind.dir);
-  maxSpeed = tripMax; updateLegend();
+  bounds.push([trip.points[trip.points.length-1].lat, trip.points[trip.points.length-1].lng]);
+  map.fitBounds(bounds, { padding:[40,40] });
+  if (trip.wind) updateWindUI(trip.wind.speed, trip.wind.dir);
 }
 
-function delTrip(id,e) {
-  e.stopPropagation();
-  const trips = loadTrips().filter(t=>t.id!==id);
-  localStorage.setItem('st_trips',JSON.stringify(trips));
-  renderTrips(); toast('Trip deleted');
+// ═══════════════════════════════════════════════
+//  SYNC TRACK BUTTONS (map + sail view)
+// ═══════════════════════════════════════════════
+function syncTrackButtons() {
+  const cls = isTracking ? 'btn-track stop' : 'btn-track start';
+  const lbl = isTracking ? '<span class="rec-dot"></span>STOP' : '▶ START';
+  document.getElementById('btn-track').className = cls;
+  document.getElementById('track-lbl').innerHTML = lbl;
+  document.getElementById('btn-track-sail').className = cls;
+  document.getElementById('track-lbl-sail').innerHTML = lbl;
 }
 
-// ── GPX ───────────────────────────────────────────────────────
-function tripToGPX(trip) {
-  const dt = new Date(trip.startTime).toISOString();
-  const wpts = (trip.waypoints||[]).map(w=>`  <wpt lat="${w.lat.toFixed(6)}" lon="${w.lng.toFixed(6)}"><name>${w.name}</name></wpt>`).join('\n');
-  const trkpts = trip.points.map(p=>`    <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}"><time>${new Date(p.ts).toISOString()}</time></trkpt>`).join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="SailTrack">\n  <metadata><time>${dt}</time></metadata>\n${wpts}\n  <trk><name>SailTrack ${dt}</name><trkseg>\n${trkpts}\n  </trkseg></trk>\n</gpx>`;
+// ═══════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════
+function switchTab(t) {
+  document.getElementById('map-view').style.display   = t === 'map'   ? 'flex'   : 'none';
+  document.getElementById('sail-view').style.display  = t === 'sail'  ? 'flex'   : 'none';
+  document.getElementById('trips-view').style.display = t === 'trips' ? 'block'  : 'none';
+  document.getElementById('tab-map').className   = 'tab' + (t === 'map'   ? ' active' : '');
+  document.getElementById('tab-sail').className  = 'tab' + (t === 'sail'  ? ' active' : '');
+  document.getElementById('tab-trips').className = 'tab' + (t === 'trips' ? ' active' : '');
+  if (t === 'map') setTimeout(() => map.invalidateSize(), 10);
+  if (t === 'trips') renderTrips();
 }
 
-function dlGPX(content,name) {
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([content],{type:'application/gpx+xml'}));
-  a.download=name; a.click();
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
 }
 
-function exportGPX(id,e) {
-  e.stopPropagation();
-  const trip=loadTrips().find(t=>t.id===id);
-  if(!trip)return;
-  dlGPX(tripToGPX(trip),'sailtrack-'+new Date(trip.startTime).toISOString().slice(0,10)+'.gpx');
-  toast('GPX exported');
-}
+// ═══════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════
+initMap();
+startGPS();
 
-function exportAll() {
-  const trips=loadTrips();
-  if(!trips.length){toast('No trips');return;}
-  trips.forEach((t,i)=>setTimeout(()=>dlGPX(tripToGPX(t),'sailtrack-'+new Date(t.startTime).toISOString().slice(0,10)+'-'+(i+1)+'.gpx'),i*300));
-  toast('Exporting '+trips.length+' trips…');
-}
-
-function clearAllData() {
-  if(!confirm('Delete all trips?'))return;
-  localStorage.removeItem('st_trips');
-  renderTrips(); toast('All trips deleted');
-}
-
-// ── NAV MATH ─────────────────────────────────────────────────
-function distNm(a,b) {
-  const R=3440.065, dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lng-a.lng)*Math.PI/180;
-  const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
-}
-function distM(a,b) { return distNm(a,b)*1852; }
-function bearing(a,b) {
-  const la=a.lat*Math.PI/180, lb=b.lat*Math.PI/180, dl=(b.lng-a.lng)*Math.PI/180;
-  return (Math.atan2(Math.sin(dl)*Math.cos(lb), Math.cos(la)*Math.sin(lb)-Math.sin(la)*Math.cos(lb)*Math.cos(dl))*180/Math.PI+360)%360;
-}
-
-// ── WAKE LOCK ─────────────────────────────────────────────────
-async function toggleWake() {
-  const btn=document.getElementById('btn-wake');
-  if (wakeLock) {
-    await wakeLock.release(); wakeLock=null;
-    btn.textContent='OFF'; btn.classList.remove('accent');
-    toast('Screen lock off');
-  } else {
-    if (!('wakeLock' in navigator)){toast('Not supported on this browser');return;}
-    try {
-      wakeLock=await navigator.wakeLock.request('screen');
-      btn.textContent='ON'; btn.classList.add('accent');
-      toast('Screen will stay on');
-      wakeLock.addEventListener('release',()=>{wakeLock=null;btn.textContent='OFF';btn.classList.remove('accent');});
-    } catch(e){toast('Wake lock failed: '+e.message);}
+// Auto wake lock on start — screen stays on by default
+(async () => {
+  const got = await acquireWakeLock();
+  if (got) {
+    screenOffMode = true;
+    document.getElementById('btn-screenoff').classList.add('screen-off-active');
   }
-}
-document.addEventListener('visibilitychange',async()=>{
-  if(wakeLock&&document.visibilityState==='visible'){try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){}}
-});
+})();
 
-// ── NAVIONICS ─────────────────────────────────────────────────
-function openNavionics() {
-  if (!currentPos){toast('No GPS position yet');return;}
-  const url=`navionics://goto?lat=${currentPos.lat.toFixed(6)}&lon=${currentPos.lng.toFixed(6)}`;
-  const geo=`geo:${currentPos.lat.toFixed(6)},${currentPos.lng.toFixed(6)}`;
-  window.location.href=url;
-  setTimeout(()=>{if(document.hasFocus())window.location.href=geo;},800);
-  toast('Opening Navionics…');
-}
-
-// ── TOAST ─────────────────────────────────────────────────────
-function toast(msg,wp=false) {
-  const el=document.getElementById('toast');
-  el.textContent=msg;
-  el.className='toast show'+(wp?' wp':'');
-  clearTimeout(el._t);
-  el._t=setTimeout(()=>el.classList.remove('show'),wp?3500:2800);
-}
-function toastWp(msg){toast(msg,true);}
-
-// ── BOOT ──────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  loadCfg();
-  loadWps();
-  initMap();
-  renderWpList();
-  renderMainWpMarkers();
-  startGPS();
-});
+// Passive wind refresh every 10 min when online
+setInterval(() => {
+  if (navigator.onLine && posMarker) {
+    const p = posMarker.getLatLng();
+    fetchWind(p.lat, p.lng);
+  }
+}, 600000);
 </script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
 </html>
+Displaying index.html.
