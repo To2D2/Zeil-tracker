@@ -236,6 +236,41 @@ header {
 .trips-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .trips-title { font-size: 17px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
 
+.trips-actions { display: flex; gap: 8px; }
+
+.btn-action {
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--deep);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: border-color 0.15s;
+}
+.btn-action:active { border-color: var(--accent); }
+.btn-action.export { color: var(--success); border-color: #0d3a28; }
+.btn-action.import { color: var(--gold);    border-color: #3a2e0d; }
+
+.backup-hint {
+  background: var(--deep);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+.backup-hint strong { color: var(--text); }
+
 .trip-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -502,7 +537,15 @@ body.chart-mode .leaflet-container { background: #d4e8f0; }
 <div id="trips-view">
   <div class="trips-header">
     <div class="trips-title">Tochtenlog</div>
+    <div class="trips-actions">
+      <button class="btn-action import" onclick="importTrips()">📥 Importeer</button>
+      <button class="btn-action export" onclick="exportTrips()">📤 Exporteer</button>
+    </div>
   </div>
+  <div class="backup-hint">
+    <strong>Tip:</strong> Exporteer je tochten als backup vóór een app-update. Importeer daarna het bestand om ze terug te laden.
+  </div>
+  <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImportFile(event)">
   <div id="trips-list"></div>
 </div>
 
@@ -993,8 +1036,32 @@ function centerMap() {
 }
 
 // ═══════════════════════════════════════════════
-//  SAVE / LOAD
+//  SAVE / LOAD  (key is PERMANENT — never change)
 // ═══════════════════════════════════════════════
+const STORAGE_KEY = 'sailtrack_trips';
+
+function migrateOldData() {
+  // Migrate from previous key names used in older versions
+  const oldKeys = ['sailtrack_v2', 'sailtrack_v1'];
+  for (const key of oldKeys) {
+    const old = localStorage.getItem(key);
+    if (old) {
+      try {
+        const oldTrips = JSON.parse(old);
+        if (oldTrips.length > 0) {
+          const current = loadTrips();
+          // Merge: add old trips that don't exist in current
+          const ids = new Set(current.map(t => t.id));
+          const merged = [...current, ...oldTrips.filter(t => !ids.has(t.id))];
+          merged.sort((a,b) => b.startTime - a.startTime);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          toast(`${oldTrips.length} oude tochten hersteld`);
+        }
+      } catch(e) {}
+      localStorage.removeItem(key); // clean up old key
+    }
+  }
+}
 function saveTrip() {
   const trips = loadTrips();
   const pts = currentTrip.points;
@@ -1019,19 +1086,72 @@ function saveTrip() {
   });
 
   if (trips.length > 60) trips.pop();
-  try { localStorage.setItem('sailtrack_v2', JSON.stringify(trips)); } catch(e) { toast('Opslag vol!'); }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(trips)); } catch(e) { toast('Opslag vol!'); }
 }
 
 function loadTrips() {
-  try { return JSON.parse(localStorage.getItem('sailtrack_v2') || '[]'); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
 }
 
 function deleteTrip(id, e) {
   e.stopPropagation();
   const trips = loadTrips().filter(t => t.id !== id);
-  localStorage.setItem('sailtrack_v2', JSON.stringify(trips));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
   renderTrips();
   toast('Tocht verwijderd');
+}
+
+// ═══════════════════════════════════════════════
+//  EXPORT — download trips as JSON file
+// ═══════════════════════════════════════════════
+function exportTrips() {
+  const trips = loadTrips();
+  if (!trips.length) { toast('Geen tochten om te exporteren'); return; }
+
+  const payload = JSON.stringify({ version: 1, exported: Date.now(), trips }, null, 2);
+  const blob = new Blob([payload], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0,10);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `sailtrack-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`${trips.length} tochten geëxporteerd`);
+}
+
+// ═══════════════════════════════════════════════
+//  IMPORT — load trips from JSON file
+// ═══════════════════════════════════════════════
+function importTrips() {
+  document.getElementById('import-file').value = '';
+  document.getElementById('import-file').click();
+}
+
+function handleImportFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      // Accept both raw array and wrapped {trips:[...]} format
+      const incoming = Array.isArray(data) ? data : (data.trips || []);
+      if (!incoming.length) { toast('Geen tochten gevonden in bestand'); return; }
+
+      const current = loadTrips();
+      const ids = new Set(current.map(t => t.id));
+      const newTrips = incoming.filter(t => t.id && t.points && !ids.has(t.id));
+      const merged = [...current, ...newTrips].sort((a,b) => b.startTime - a.startTime);
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      renderTrips();
+      toast(`${newTrips.length} nieuwe tochten geladen`);
+    } catch(err) {
+      toast('Ongeldig bestand — import mislukt');
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ═══════════════════════════════════════════════
@@ -1133,6 +1253,7 @@ function toast(msg) {
 // ═══════════════════════════════════════════════
 initMap();
 startGPS();
+migrateOldData(); // recover trips from older app versions
 
 // Auto wake lock on start — screen stays on by default
 (async () => {
@@ -1153,4 +1274,3 @@ setInterval(() => {
 </script>
 </body>
 </html>
-Displaying index.html.
